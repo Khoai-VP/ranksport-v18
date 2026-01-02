@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>RankSport MVP - Gatekeeper Auth</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700&family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root { --bg: #0F172A; --card: #1E293B; --primary: #C5A059; }
+        body { background: var(--bg); color: #F1F5F9; font-family: 'Inter', sans-serif; margin: 0; overflow-x: hidden; }
+        .auth-overlay { position: fixed; inset: 0; background: var(--bg); z-index: 100; display: flex; flex-direction: column; justify-content: center; padding: 40px; transition: 0.5s; }
+        .input-field { background: #1E293B; border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; padding: 18px; color: white; width: 100%; outline: none; transition: 0.3s; font-size: 16px; }
+        .input-field:focus { border-color: var(--primary); box-shadow: 0 0 15px rgba(197,160,89,0.2); }
+        .btn-primary { background: linear-gradient(to br, #D4AF37, #C5A059); color: black; font-weight: 800; padding: 18px; border-radius: 16px; width: 100%; transition: 0.2s; text-transform: uppercase; letter-spacing: 1px; cursor: pointer; }
+        .btn-primary:active { transform: scale(0.95); opacity: 0.8; }
+        .hidden { display: none !important; }
+        .elo-value { font-size: 38px; font-weight: 800; font-style: italic; color: var(--primary); text-shadow: 0 0 12px rgba(197,160,89,0.4); }
+        #recaptcha-container { display: flex; justify-content: center; margin-bottom: 10px; }
+    </style>
+</head>
+<body>
+
+    <div id="auth-screen" class="auth-overlay">
+        <div class="mb-12 text-center">
+            <h1 style="font-family:'Orbitron'" class="text-4xl text-[#C5A059] mb-3 italic tracking-tighter">RANK SPORT</h1>
+            <p class="text-slate-500 text-[10px] font-extrabold uppercase tracking-[0.3em]">Xác thực tư cách vận động viên</p>
+        </div>
+
+        <div id="phone-step" class="space-y-4">
+            <div>
+                <p class="text-[10px] text-slate-400 mb-2 ml-1 font-bold uppercase tracking-widest text-center">Nhập số điện thoại (VD: +84...)</p>
+                <input type="tel" id="phone-number" class="input-field text-center" placeholder="+84 901 234 567">
+            </div>
+            <div id="recaptcha-container"></div>
+            <button id="send-otp" class="btn-primary">Nhận mã OTP</button>
+        </div>
+
+        <div id="otp-step" class="hidden space-y-4">
+            <div>
+                <p class="text-[10px] text-slate-400 mb-2 ml-1 font-bold uppercase tracking-widest text-center text-[#C5A059]">Mã OTP đã được gửi</p>
+                <input type="number" id="otp-code" class="input-field text-center text-3xl tracking-[0.5em]" placeholder="000000">
+            </div>
+            <button id="verify-otp" class="btn-primary">Xác nhận & Vào App</button>
+            <p onclick="location.reload()" class="text-center text-slate-500 text-[10px] uppercase font-bold mt-4 cursor-pointer">Quay lại</p>
+        </div>
+    </div>
+
+    <div id="main-app" class="hidden min-h-screen flex flex-col max-w-md mx-auto border-x border-white/5 pb-32 p-6">
+        <header class="flex justify-between items-start mb-10 pt-4">
+            <div>
+                <h2 id="display-name" class="text-2xl font-extrabold tracking-tight uppercase italic">Vận động viên</h2>
+                <div class="flex items-center gap-2 mt-1">
+                    <span id="user-rank" class="bg-[#C5A059] px-2 py-0.5 text-[10px] font-black text-black rounded italic">GOLD III</span>
+                    <span class="text-[9px] text-slate-500 font-bold uppercase tracking-tighter">Verified ✓</span>
+                </div>
+            </div>
+            <div class="text-right">
+                <p id="user-elo" class="elo-value">----</p>
+                <p class="text-[10px] text-slate-500 font-bold italic tracking-tighter uppercase">Rating Score</p>
+            </div>
+        </header>
+
+        <main class="space-y-6">
+            <div class="bg-[#1E293B] p-8 rounded-[32px] border border-white/5 text-center shadow-2xl">
+                <div class="w-16 h-16 bg-[#C5A059]/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <div class="w-8 h-8 border-2 border-[#C5A059] rounded-full flex items-center justify-center font-black text-[#C5A059]">R</div>
+                </div>
+                <h3 class="text-[#C5A059] text-sm font-bold uppercase italic tracking-widest">Hồ sơ đã kích hoạt</h3>
+                <p class="text-[11px] text-slate-400 mt-2 leading-relaxed">Chào mừng ông đã quay lại sân đấu. Hệ thống đang đồng bộ dữ liệu Real-time với máy chủ Firebase.</p>
+            </div>
+
+            <div class="grid grid-cols-2 gap-4">
+                <div class="bg-white/5 p-4 rounded-2xl border border-white/5 opacity-50">
+                    <p class="text-[10px] font-bold text-slate-500 uppercase">Trận thắng</p>
+                    <p class="text-xl font-bold italic">--</p>
+                </div>
+                <div class="bg-white/5 p-4 rounded-2xl border border-white/5 opacity-50">
+                    <p class="text-[10px] font-bold text-slate-500 uppercase">Tỷ lệ</p>
+                    <p class="text-xl font-bold italic">--%</p>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js";
+        import { getAuth, RecaptchaVerifier, signInWithPhoneNumber } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, onSnapshot, getDoc } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyBpytj0KQybf55iabBzmeg59VL-9oADPHA",
+            authDomain: "badrank-89mrd.firebaseapp.com",
+            projectId: "badrank-89mrd",
+            storageBucket: "badrank-89mrd.firebasestorage.app",
+            messagingSenderId: "94437268200",
+            appId: "1:94437268200:web:b1726f5d55cc5e631c475d",
+            measurementId: "G-Y9SWG42HCM"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        // Khởi tạo ReCaptcha ẩn
+        window.recaptchaVerifier = new RecaptchaVerifier('recaptcha-container', {
+            'size': 'invisible',
+            'callback': (response) => {}
+        }, auth);
+
+        let confirmationResult;
+
+        // Xử lý gửi OTP
+        document.getElementById('send-otp').onclick = async () => {
+            const phoneNumber = document.getElementById('phone-number').value.trim();
+            if(!phoneNumber.startsWith('+')) {
+                alert("Vui lòng nhập định dạng quốc tế, ví dụ: +84901234567");
+                return;
+            }
+            try {
+                confirmationResult = await signInWithPhoneNumber(auth, phoneNumber, window.recaptchaVerifier);
+                document.getElementById('phone-step').classList.add('hidden');
+                document.getElementById('otp-step').classList.remove('hidden');
+            } catch (error) {
+                console.error(error);
+                alert("Lỗi bảo mật hoặc SĐT sai. Hãy thử lại trên trình duyệt Chrome/Safari.");
+            }
+        };
+
+        // Xử lý xác nhận OTP
+        document.getElementById('verify-otp').onclick = async () => {
+            const code = document.getElementById('otp-code').value.trim();
+            try {
+                const result = await confirmationResult.confirm(code);
+                const user = result.user;
+                
+                // Lắng nghe dữ liệu Real-time
+                onSnapshot(doc(db, "users", user.uid), async (docSnap) => {
+                    if (!docSnap.exists()) {
+                        // Tạo mới nếu chưa có trong Database
+                        await setDoc(doc(db, "users", user.uid), {
+                            elo: 1200,
+                            rank: "BRONZE I",
+                            displayName: "VĐV " + user.phoneNumber.slice(-4),
+                            phone: user.phoneNumber
+                        });
+                    } else {
+                        const data = docSnap.data();
+                        document.getElementById('user-elo').innerText = data.elo || 1200;
+                        document.getElementById('display-name').innerText = data.displayName || "Elite Athlete";
+                        document.getElementById('user-rank').innerText = data.rank || "UNRANKED";
+                    }
+                });
+
+                // Chuyển màn hình
+                document.getElementById('auth-screen').style.opacity = '0';
+                setTimeout(() => {
+                    document.getElementById('auth-screen').classList.add('hidden');
+                    document.getElementById('main-app').classList.remove('hidden');
+                }, 500);
+
+            } catch (error) {
+                alert("Mã OTP không chính xác. Vui lòng kiểm tra lại.");
+            }
+        };
+    </script>
+</body>
+</html>
