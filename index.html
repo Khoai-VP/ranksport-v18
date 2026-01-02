@@ -3,162 +3,235 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>RankSport Commercial MVP</title>
+    <title>RankSport MVP V27.1</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700&family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        :root { --bg: #0B0F1A; --card: #161B2D; --primary: #C5A059; }
-        body { background: var(--bg); color: #F1F5F9; font-family: 'Inter', sans-serif; }
-        .cyber-card { background: var(--card); border: 1px solid rgba(197, 160, 89, 0.1); border-radius: 20px; }
-        .rank-gradient { background: linear-gradient(90deg, #C5A059 0%, #FDE68A 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-        .btn-google { background: white; color: #1f2937; font-weight: 700; padding: 14px; border-radius: 12px; display: flex; items-center; justify-content: center; gap: 10px; width: 100%; }
+        :root { --bg: #050505; --card: #121212; --primary: #FACC15; --text-dim: #888888; }
+        body { background: var(--bg); color: white; font-family: 'Inter', sans-serif; overflow-x: hidden; }
+        .liftoff-card { background: var(--card); border-radius: 24px; padding: 20px; border: 1px solid rgba(255,255,255,0.03); margin-bottom: 12px; }
+        .nav-bar { background: rgba(5, 5, 5, 0.9); backdrop-filter: blur(20px); border-top: 1px solid #151515; height: 85px; position: fixed; bottom: 0; left: 0; right: 0; display: flex; justify-content: space-around; align-items: center; z-index: 50; }
+        .nav-btn { color: var(--text-dim); display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 9px; font-weight: 800; border: none; background: none; cursor: pointer; }
+        .nav-btn.active { color: var(--primary); }
+        .action-btn { width: 56px; height: 56px; background: var(--primary); border-radius: 20px; display: flex; align-items: center; justify-content: center; color: black; font-size: 24px; margin-top: -45px; box-shadow: 0 10px 25px rgba(250, 204, 21, 0.3); }
+        .slot { padding: 12px; border-radius: 14px; font-size: 11px; font-weight: 800; text-align: center; border: 1px solid #222; cursor: pointer; transition: 0.2s; }
+        .slot.available { border-color: var(--primary); color: var(--primary); }
+        .slot.pending { background: #f59e0b; color: black; border-color: #f59e0b; animation: pulse 1.5s infinite; }
+        .slot.booked { opacity: 0.15; background: #222; cursor: not-allowed; border: none; }
         .hidden { display: none !important; }
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.6; } 100% { opacity: 1; } }
     </style>
 </head>
 <body>
 
-    <div id="auth-screen" class="min-h-screen flex flex-col justify-center px-8">
-        <div class="text-center mb-10">
-            <h1 style="font-family:'Orbitron'" class="text-4xl rank-gradient mb-2 italic">RANK SPORT</h1>
-            <p class="text-slate-500 text-[10px] uppercase tracking-widest font-bold">Hệ thống xếp hạng VĐV chuyên nghiệp</p>
+    <div id="auth-screen" class="min-h-screen flex flex-col justify-center items-center px-10 text-center">
+        <div class="w-20 h-20 bg-primary rounded-[2rem] flex items-center justify-center rotate-12 mb-8 shadow-2xl">
+            <i class="fa-solid fa-bolt-lightning text-4xl text-black -rotate-12"></i>
         </div>
-        <button id="login-google" class="btn-google">
-            <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="20">
-            Đăng nhập bằng Google
+        <h1 class="text-3xl font-black italic mb-2 tracking-tight">RANKSPORT <span class="text-primary">EMPIRE</span></h1>
+        <p class="text-dim text-[10px] font-bold uppercase tracking-[0.3em] mb-12">No-Storage Test Mode</p>
+        <button id="login-google" class="w-full bg-white text-black font-black py-4 rounded-2xl flex items-center justify-center gap-3 active:scale-95 transition">
+            <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="20"> Tiếp tục với Google
         </button>
-        <p class="text-slate-600 text-[10px] text-center mt-6 italic">Miễn phí trọn đời cho vận động viên hội viên</p>
+    </div>
+
+    <div id="onboarding-screen" class="hidden fixed inset-0 bg-black z-[100] p-8 flex flex-col justify-center">
+        <h2 class="text-2xl font-black mb-6 uppercase italic">Vai trò của bạn?</h2>
+        <div class="space-y-4">
+            <button onclick="setRole('vdv')" class="w-full liftoff-card text-left border-2 border-transparent hover:border-primary transition">
+                <p class="font-black text-lg">VẬN ĐỘNG VIÊN</p>
+                <p class="text-[10px] text-dim font-bold uppercase">Leo Rank & Đặt sân nhanh</p>
+            </button>
+            <button onclick="setRole('owner')" class="w-full liftoff-card text-left border-2 border-transparent hover:border-blue-500 transition">
+                <p class="font-black text-lg text-blue-400">CHỦ SÂN</p>
+                <p class="text-[10px] text-dim font-bold uppercase">Quản lý lịch & Duyệt đơn</p>
+            </button>
+        </div>
     </div>
 
     <div id="main-app" class="hidden pb-24">
-        <header class="p-6 border-b border-white/5 sticky top-0 bg-[#0B0F1A]/80 backdrop-blur-md z-10">
-            <div class="flex justify-between items-center">
-                <div class="flex items-center gap-3">
-                    <img id="user-avatar" src="" class="w-12 h-12 rounded-full border-2 border-[#C5A059]">
-                    <div>
-                        <h2 id="user-name" class="font-bold text-lg leading-none">VĐV Tên</h2>
-                        <span id="user-rank" class="rank-gradient text-[10px] font-black italic uppercase">Rank Name</span>
-                    </div>
-                </div>
-                <div class="text-right">
-                    <p id="user-elo" class="text-2xl font-black text-[#C5A059] italic">----</p>
-                    <p class="text-[9px] text-slate-500 uppercase font-bold tracking-tighter">Elo Rating</p>
-                </div>
-            </div>
+        <header class="p-8 flex justify-between items-center sticky top-0 bg-black/80 backdrop-blur-md z-40">
+            <div><h2 id="user-name" class="text-xl font-black italic tracking-tight">---</h2><p id="user-role" class="text-[9px] font-black text-primary uppercase mt-1">---</p></div>
+            <img id="user-img" src="" class="w-11 h-11 rounded-2xl border-2 border-white/5">
         </header>
 
-        <nav class="flex px-6 py-4 gap-4 overflow-x-auto no-scrollbar">
-            <button onclick="switchTab('ranking')" class="px-4 py-2 rounded-full bg-[#C5A059] text-black text-xs font-bold whitespace-nowrap">Bảng Xếp Hạng</button>
-            <button onclick="switchTab('courts')" class="px-4 py-2 rounded-full bg-white/5 text-slate-400 text-xs font-bold whitespace-nowrap">Sân Chơi</button>
-            <button onclick="switchTab('history')" class="px-4 py-2 rounded-full bg-white/5 text-slate-400 text-xs font-bold whitespace-nowrap">Lịch Sử</button>
-        </nav>
-
-        <div id="tab-ranking" class="px-6 space-y-3">
-            <h3 class="text-xs font-bold text-slate-500 uppercase mb-4 tracking-widest">Top Vận Động Viên</h3>
-            <div id="ranking-list" class="space-y-2">
+        <div id="tab-booking" class="tab-content px-6">
+            <div class="liftoff-card">
+                <div class="flex justify-between items-start mb-6">
+                    <div><h4 class="font-black text-lg">Sân Empire (Test)</h4><p class="text-[9px] text-dim italic">Bấm vào giờ để đặt</p></div>
+                    <span class="text-primary font-black italic text-lg">80k<span class="text-[10px]">/h</span></span>
                 </div>
+                <div class="grid grid-cols-3 gap-3" id="slot-container"></div>
+            </div>
         </div>
 
-        <div id="tab-courts" class="hidden px-6 space-y-4">
-            <h3 class="text-xs font-bold text-slate-500 uppercase mb-4 tracking-widest">Sân Đấu Kích Hoạt</h3>
-            <div id="court-list" class="space-y-4">
-                </div>
+        <div id="tab-ranking" class="tab-content hidden px-6">
+            <h3 class="text-[11px] font-black text-dim uppercase mb-6">BXH THẾ GIỚI</h3>
+            <div id="ranking-list" class="space-y-2"></div>
+        </div>
+
+        <div id="tab-manage" class="tab-content hidden px-6">
+            <h3 class="text-[11px] font-black text-dim uppercase mb-6">Đơn chờ duyệt</h3>
+            <div id="order-list" class="space-y-4"></div>
+        </div>
+
+        <nav class="nav-bar">
+            <button onclick="showTab('booking')" id="btn-booking" class="nav-btn active"><i class="fa-solid fa-calendar-days text-lg"></i><span>BOOKING</span></button>
+            <button onclick="showTab('ranking')" id="btn-ranking" class="nav-btn"><i class="fa-solid fa-ranking-star text-lg"></i><span>RANK</span></button>
+            <div class="action-btn" onclick="alert('Admin: trandung.tv.89@gmail.com')"><i class="fa-solid fa-plus"></i></div>
+            <button onclick="showTab('manage')" id="btn-manage" class="nav-btn hidden"><i class="fa-solid fa-list-check text-lg"></i><span>QUẢN LÝ</span></button>
+        </nav>
+    </div>
+
+    <div id="payment-modal" class="hidden fixed inset-0 bg-black/95 z-[200] p-6 flex items-center justify-center">
+        <div class="w-full max-w-sm bg-card rounded-[2.5rem] p-8 border border-white/10 text-center">
+            <p class="text-[10px] font-black text-primary uppercase tracking-[0.3em] mb-4">Xác nhận chuyển khoản</p>
+            <div class="bg-white p-3 rounded-2xl inline-block mb-4">
+                <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=0912345678" class="w-32 h-32">
+            </div>
+            <p class="text-sm font-bold text-white/70 mb-6 px-4 italic">Quét mã và chuyển 80k. Hệ thống sẽ báo chủ sân kiểm tra ngay.</p>
+            <button id="confirm-pay-btn" class="w-full bg-primary text-black font-black py-4 rounded-2xl shadow-lg active:scale-95 transition">XÁC NHẬN ĐÃ CHUYỂN TIỀN</button>
+            <button onclick="document.getElementById('payment-modal').classList.add('hidden')" class="mt-4 text-[10px] text-dim font-bold uppercase tracking-widest">Hủy bỏ</button>
         </div>
     </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js";
-        import { getAuth, signInWithPopup, GoogleAuthProvider } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-auth.js";
-        import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
+        import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-auth.js";
+        import { getFirestore, doc, getDoc, setDoc, onSnapshot, collection, query, orderBy, updateDoc, addDoc } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyBpytj0KQybf55iabBzmeg59VL-9oADPHA",
             authDomain: "badrank-89mrd.firebaseapp.com",
             projectId: "badrank-89mrd",
-            storageBucket: "badrank-89mrd.firebasestorage.app",
-            messagingSenderId: "94437268200",
-            appId: "1:94437268200:web:b1726f5d55cc5e631c475d"
+            storageBucket: "badrank-89mrd.firebasestorage.app"
         };
 
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
         const provider = new GoogleAuthProvider();
+        
+        // --- SỬA EMAIL CỦA ÔNG TẠI ĐÂY ---
+        const ADMIN_EMAIL = "trandung.tv.89@gmail.com"; 
 
-        // Dữ liệu giả lập để test
-        const mockVdv = [
-            { name: "Nguyễn Văn A", elo: 1450, rank: "PLATINUM I" },
-            { name: "Trần Thị B", elo: 1320, rank: "GOLD II" },
-            { name: "Lê Văn C", elo: 1280, rank: "GOLD III" }
-        ];
+        let selectedTime = null;
 
-        const mockCourts = [
-            { name: "Sân Cầu Lông Kỳ Hòa", address: "Quận 10, TP.HCM", status: "Active" },
-            { name: "Sân Đào Duy Anh", address: "Phú Nhuận, TP.HCM", status: "Full" }
-        ];
-
-        // Xử lý đăng nhập
         document.getElementById('login-google').onclick = async () => {
-            try {
-                const result = await signInWithPopup(auth, provider);
-                const user = result.user;
-                setupRealtime(user);
-                showMainApp(user);
-                renderMockData();
-            } catch (error) {
-                alert("Lỗi đăng nhập: " + error.message);
-            }
+            const res = await signInWithPopup(auth, provider);
+            const userDoc = await getDoc(doc(db, "users", res.user.uid));
+            if (!userDoc.exists()) {
+                document.getElementById('auth-screen').classList.add('hidden');
+                document.getElementById('onboarding-screen').classList.remove('hidden');
+            } else { launchApp(res.user, userDoc.data()); }
         };
 
-        function showMainApp(user) {
+        window.setRole = async (role) => {
+            const user = auth.currentUser;
+            const data = { uid: user.uid, displayName: user.displayName, photoURL: user.photoURL, email: user.email, role, elo: 1200, rank: "BRONZE I", createdAt: new Date() };
+            await setDoc(doc(db, "users", user.uid), data);
+            launchApp(user, data);
+        };
+
+        function launchApp(user, data) {
             document.getElementById('auth-screen').classList.add('hidden');
+            document.getElementById('onboarding-screen').classList.add('hidden');
             document.getElementById('main-app').classList.remove('hidden');
             document.getElementById('user-name').innerText = user.displayName;
-            document.getElementById('user-avatar').src = user.photoURL;
+            document.getElementById('user-img').src = user.photoURL;
+            document.getElementById('user-role').innerText = data.role === 'owner' || user.email === ADMIN_EMAIL ? 'Quản lý Hệ Thống' : 'Vận Động Viên';
+            
+            if (data.role === 'owner' || user.email === ADMIN_EMAIL) {
+                document.getElementById('btn-manage').classList.remove('hidden');
+            }
+
+            initRealtime();
         }
 
-        function renderMockData() {
-            // Render VĐV
-            const rankList = document.getElementById('ranking-list');
-            rankList.innerHTML = mockVdv.map((v, i) => `
-                <div class="cyber-card p-4 flex justify-between items-center">
-                    <div class="flex items-center gap-3">
-                        <span class="text-slate-600 font-black">#${i+1}</span>
-                        <div>
-                            <p class="font-bold text-sm">${v.name}</p>
-                            <p class="text-[9px] text-[#C5A059] font-bold tracking-tighter">${v.rank}</p>
+        function initRealtime() {
+            // BXH
+            onSnapshot(query(collection(db, "users"), orderBy("elo", "desc")), (snap) => {
+                const list = document.getElementById('ranking-list');
+                list.innerHTML = "";
+                snap.forEach((d, i) => {
+                    const u = d.data();
+                    list.innerHTML += `<div class="liftoff-card flex justify-between items-center py-3">
+                        <div class="flex items-center gap-3">
+                            <span class="text-[10px] font-black ${i<3?'text-primary':'text-dim'}">#${i+1}</span>
+                            <img src="${u.photoURL}" class="w-10 h-10 rounded-xl">
+                            <div><p class="font-bold text-xs">${u.displayName}</p><p class="text-[7px] text-primary uppercase">${u.rank}</p></div>
                         </div>
-                    </div>
-                    <p class="font-black italic text-[#C5A059]">${v.elo}</p>
-                </div>
-            `).join('');
+                        <p class="font-black italic">${u.elo}</p>
+                    </div>`;
+                });
+            });
 
-            // Render Sân
-            const courtList = document.getElementById('court-list');
-            courtList.innerHTML = mockCourts.map(c => `
-                <div class="cyber-card p-5">
-                    <div class="flex justify-between items-start mb-2">
-                        <h4 class="font-bold text-[#C5A059]">${c.name}</h4>
-                        <span class="text-[9px] px-2 py-1 bg-green-500/20 text-green-400 rounded-full font-bold uppercase">${c.status}</span>
-                    </div>
-                    <p class="text-[11px] text-slate-400">📍 ${c.address}</p>
-                </div>
-            `).join('');
-        }
+            // Lịch sân
+            const times = ["17:00", "18:00", "19:00", "20:00", "21:00", "22:00"];
+            onSnapshot(collection(db, "bookings"), (snap) => {
+                const container = document.getElementById('slot-container');
+                container.innerHTML = "";
+                const bookedMap = {};
+                snap.forEach(d => bookedMap[d.data().time] = d.data().status);
+                times.forEach(t => {
+                    let cls = "available";
+                    if(bookedMap[t] === 'pending') cls = "pending";
+                    if(bookedMap[t] === 'confirmed') cls = "booked";
+                    container.innerHTML += `<div onclick="handleSlot('${t}', '${bookedMap[t]}')" class="slot ${cls}">${t}</div>`;
+                });
+            });
 
-        function setupRealtime(user) {
-            onSnapshot(doc(db, "users", user.uid), (docSnap) => {
-                if (docSnap.exists()) {
-                    const data = docSnap.data();
-                    document.getElementById('user-elo').innerText = data.elo;
-                    document.getElementById('user-rank').innerText = data.rank;
-                }
+            // Duyệt đơn
+            onSnapshot(collection(db, "bookings"), (snap) => {
+                const list = document.getElementById('order-list');
+                list.innerHTML = "";
+                snap.forEach(d => {
+                    const o = d.data();
+                    if(o.status === 'pending') {
+                        list.innerHTML += `<div class="liftoff-card">
+                            <p class="text-[10px] font-black text-primary mb-2 uppercase">Yêu cầu lúc: ${o.time}</p>
+                            <p class="text-sm font-bold mb-4">Khách: ${o.userName}</p>
+                            <button onclick="confirmOrder('${d.id}')" class="w-full bg-white text-black font-black py-3 rounded-xl text-[10px]">XÁC NHẬN TIỀN ĐÃ VỀ</button>
+                        </div>`;
+                    }
+                });
             });
         }
 
-        window.switchTab = (tab) => {
-            document.getElementById('tab-ranking').classList.toggle('hidden', tab !== 'ranking');
-            document.getElementById('tab-courts').classList.toggle('hidden', tab !== 'courts');
+        window.handleSlot = (time, status) => {
+            if(status) return;
+            selectedTime = time;
+            document.getElementById('payment-modal').classList.remove('hidden');
         };
+
+        document.getElementById('confirm-pay-btn').onclick = async () => {
+            await addDoc(collection(db, "bookings"), {
+                time: selectedTime,
+                userName: auth.currentUser.displayName,
+                status: 'pending',
+                createdAt: new Date()
+            });
+            document.getElementById('payment-modal').classList.add('hidden');
+            alert("Thông báo đã gửi tới chủ sân!");
+        };
+
+        window.confirmOrder = async (id) => {
+            await updateDoc(doc(db, "bookings", id), { status: 'confirmed' });
+        };
+
+        window.showTab = (tab) => {
+            document.querySelectorAll('.tab-content').forEach(e => e.classList.add('hidden'));
+            document.querySelectorAll('.nav-btn').forEach(e => e.classList.remove('active'));
+            document.getElementById(`tab-${tab}`).classList.remove('hidden');
+            document.getElementById(`btn-${tab}`).classList.add('active');
+        };
+
+        onAuthStateChanged(auth, (user) => { if (user) checkUser(user); });
+        async function checkUser(user) {
+            const d = await getDoc(doc(db, "users", user.uid));
+            if (d.exists()) launchApp(user, d.data());
+        }
     </script>
 </body>
 </html>
