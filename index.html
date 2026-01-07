@@ -1,245 +1,177 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
+    <title>RankSport - Extreme Energy</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>RankSport MVP V27.1</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
+    
     <style>
-        .slot-booked { background-color: #94a3b8 !important; cursor: not-allowed; }
-        .slot-pending { background-color: #fbbf24 !important; }
-        .slot-available { background-color: #10b981; cursor: pointer; }
-        .loading-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: none; justify-content: center; align-items: center; z-index: 9999; }
+        @import url('https://fonts.googleapis.com/css2?family=Oswald:wght@700&family=Inter:wght@400;600&display=swap');
+        .sport-font { font-family: 'Oswald', sans-serif; text-transform: uppercase; }
+        body { font-family: 'Inter', sans-serif; background-color: #0f172a; color: white; }
+        .glass-card { background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.1); }
     </style>
 </head>
-<body class="bg-gray-100 pb-20">
 
-    <div id="loading" class="loading-overlay"><div class="animate-spin rounded-full h-12 w-12 border-b-2 border-white"></div></div>
+<body class="pb-24">
 
-    <div id="auth-section" class="flex flex-col items-center justify-center min-h-screen p-4">
-        <h1 class="text-3xl font-bold mb-8 text-blue-600">RankSport MVP</h1>
-        <button id="login-btn" class="bg-white border border-gray-300 px-6 py-3 rounded-lg shadow-sm flex items-center hover:bg-gray-50">
-            <img src="https://www.gstatic.com/images/branding/product/1x/gmail_512dp.png" class="w-6 h-6 mr-2" alt="G">
-            Đăng nhập bằng Google
-        </button>
+<div id="loading" class="hidden fixed inset-0 bg-black bg-opacity-80 flex flex-col items-center justify-center z-50">
+    <div class="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-lime-400"></div>
+    <p class="mt-4 sport-font text-lime-400 tracking-widest">Đang tải...</p>
+</div>
+
+<div id="login-screen" class="min-h-screen flex flex-col justify-center items-center px-6">
+    <div class="mb-12 text-center">
+        <h1 class="text-6xl sport-font italic text-lime-400 leading-none">RANK<span class="text-white">SPORT</span></h1>
+        <p class="text-gray-400 tracking-widest text-sm mt-2">BỨT PHÁ GIỚI HẠN</p>
     </div>
+    
+    <button id="btn-login" class="w-full max-w-xs bg-white text-black font-bold py-4 px-6 rounded-full flex items-center justify-center gap-3 hover:bg-lime-400 transition-all transform hover:scale-105 shadow-xl">
+        <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="20" alt="google">
+        ĐĂNG NHẬP VỚI GOOGLE
+    </button>
+</div>
 
-    <div id="main-ui" class="hidden">
-        <header class="bg-blue-600 text-white p-4 shadow-md sticky top-0 z-10">
-            <div class="flex justify-between items-center">
-                <span id="user-info" class="font-medium">Chào mừng!</span>
-                <button id="logout-btn" class="text-sm bg-blue-700 px-3 py-1 rounded">Thoát</button>
-            </div>
-        </header>
-
-        <div id="role-selector" class="hidden p-4">
-            <h2 class="text-xl font-bold mb-4 text-center">Bạn là ai?</h2>
-            <div class="grid grid-cols-2 gap-4">
-                <button onclick="setRole('player')" class="bg-green-500 text-white p-6 rounded-xl shadow-lg">VẬN ĐỘNG VIÊN</button>
-                <button onclick="setRole('owner')" class="bg-blue-500 text-white p-6 rounded-xl shadow-lg">CHỦ SÂN</button>
-            </div>
+<div id="app" class="hidden">
+    <header class="bg-slate-900 border-b border-slate-800 p-4 flex justify-between items-center sticky top-0 z-40">
+        <span class="sport-font text-xl text-lime-400 italic">RANK<span class="text-white">S</span></span>
+        <div class="flex items-center gap-3">
+            <span id="user-name" class="text-xs font-semibold uppercase tracking-tighter"></span>
+            <button id="btn-logout" class="text-[10px] border border-red-500 text-red-500 px-2 py-1 rounded hover:bg-red-500 hover:text-white transition">THOÁT</button>
         </div>
+    </header>
 
-        <main id="app-content" class="p-4"></main>
-
-        <nav class="fixed bottom-0 left-0 right-0 bg-white border-t flex justify-around p-2 shadow-lg">
-            <button onclick="showBooking()" class="flex flex-col items-center p-2 text-blue-600">
-                <span class="text-xs">BOOKING</span>
+    <div id="role-screen" class="hidden p-8 flex flex-col items-center justify-center min-h-[80vh]">
+        <h2 class="text-3xl sport-font italic mb-8 text-center">BẠN LÀ AI?</h2>
+        <div class="grid grid-cols-1 gap-6 w-full max-w-sm">
+            <button onclick="chonVaiTro('player')" class="glass-card p-8 rounded-2xl hover:border-lime-400 group transition-all">
+                <div class="text-4xl mb-2 italic group-hover:scale-110 transition-transform">👟</div>
+                <div class="sport-font text-2xl text-lime-400">VẬN ĐỘNG VIÊN</div>
+                <p class="text-xs text-gray-400">Tìm sân, đối thủ & leo hạng</p>
             </button>
-            <button id="nav-admin" onclick="showAdmin()" class="hidden flex flex-col items-center p-2 text-gray-600">
-                <span class="text-xs font-bold text-red-500">QUẢN LÝ</span>
+            <button onclick="chonVaiTro('owner')" class="glass-card p-8 rounded-2xl hover:border-blue-400 group transition-all">
+                <div class="text-4xl mb-2 italic group-hover:scale-110 transition-transform">🏟️</div>
+                <div class="sport-font text-2xl text-blue-400">CHỦ SÂN</div>
+                <p class="text-xs text-gray-400">Quản lý lịch & doanh thu</p>
             </button>
-        </nav>
-    </div>
-
-    <div id="booking-modal" class="hidden fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center p-4 z-50">
-        <div class="bg-white rounded-2xl p-6 w-full max-w-md text-center">
-            <h3 class="text-xl font-bold mb-4">THANH TOÁN GIỮ SÂN</h3>
-            <div class="bg-gray-100 p-4 rounded-lg mb-4">
-                <p id="modal-slot-info" class="font-bold text-lg mb-2"></p>
-                <p class="text-red-500 font-bold text-2xl mb-4">50.000đ</p>
-                <img id="qr-code" src="https://img.vietqr.io/image/mbbank-0358655999-compact2.png?amount=50000&addInfo=DATSAN" class="mx-auto w-48 h-48 border-2 border-blue-500 p-1">
-            </div>
-            <p class="text-sm text-gray-500 mb-4 italic">Nội dung CK: DATSAN [Họ tên]</p>
-            <div class="flex gap-2">
-                <button onclick="closeModal()" class="flex-1 py-3 border rounded-xl">Hủy</button>
-                <button onclick="confirmBooking()" class="flex-1 py-3 bg-yellow-500 text-white font-bold rounded-xl">XÁC NHẬN ĐÃ CHUYỂN</button>
-            </div>
         </div>
     </div>
 
-    <script>
-        // --- 1. CONFIGURATION ---
-        const ADMIN_EMAIL = "trandung.tv.89@gmail.com";
-        const firebaseConfig = {
-            apiKey: "AIzaSyBpytj0KQybf55iabBzmeg59VL-9oADPHA",
-            authDomain: "badrank-89mrd.firebaseapp.com",
-            projectId: "badrank-89mrd",
-            storageBucket: "badrank-89mrd.appspot.com",
-            messagingSenderId: "951939105470",
-            appId: "1:951939105470:web:968f94f61f94d9b4b08705"
-        };
+    <main id="main-content" class="p-6 text-center text-gray-400"></main>
 
-        // Initialize Firebase
-        firebase.initializeApp(firebaseConfig);
-        const auth = firebase.auth();
-        const db = firebase.firestore();
-        const provider = new firebase.auth.GoogleAuthProvider();
+    <nav id="bottom-nav" class="fixed bottom-0 left-0 right-0 bg-slate-900/90 backdrop-blur-md border-t border-slate-800 flex justify-around p-4 shadow-2xl"></nav>
+</div>
 
-        let currentUser = null;
-        let userData = null;
-        let selectedSlot = null;
+<script>
+// ===== Cấu hình Firebase =====
+const firebaseConfig = {
+    apiKey: "AIzaSyBpytj0KQybf55iabBzmeg59VL-9oADPHA",
+    authDomain: "badrank-89mrd.firebaseapp.com",
+    projectId: "badrank-89mrd",
+    storageBucket: "badrank-89mrd.appspot.com",
+    messagingSenderId: "951939105470",
+    appId: "1:951939105470:web:968f94f61f94d9b4b08705"
+};
 
-        // --- 2. AUTHENTICATION ---
-        document.getElementById('login-btn').onclick = () => auth.signInWithPopup(provider);
-        document.getElementById('logout-btn').onclick = () => auth.signOut();
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.firestore();
+const provider = new firebase.auth.GoogleAuthProvider();
 
-        auth.onAuthStateChanged(async (user) => {
-            currentUser = user;
-            if (user) {
-                document.getElementById('auth-section').classList.add('hidden');
-                document.getElementById('main-ui').classList.remove('hidden');
-                document.getElementById('user-info').innerText = user.displayName;
-                
-                // Check user record
-                const userDoc = await db.collection('users').doc(user.uid).get();
-                if (!userDoc.exists) {
-                    document.getElementById('role-selector').classList.remove('hidden');
-                    document.getElementById('app-content').innerHTML = '';
-                } else {
-                    userData = userDoc.data();
-                    if (userData.email === ADMIN_EMAIL || userData.role === 'owner') {
-                        document.getElementById('nav-admin').classList.remove('hidden');
-                    }
-                    showBooking();
-                }
-            } else {
-                location.reload();
-            }
-        });
+function hienLoading(bat) {
+    document.getElementById("loading").classList.toggle("hidden", !bat);
+}
 
-        async function setRole(role) {
-            if (!currentUser) return;
-            showLoading(true);
-            userData = {
-                uid: currentUser.uid,
-                displayName: currentUser.displayName,
-                email: currentUser.email,
-                role: role,
-                createdAt: firebase.firestore.FieldValue.serverTimestamp()
-            };
-            await db.collection('users').doc(currentUser.uid).set(userData);
-            document.getElementById('role-selector').classList.add('hidden');
-            if (role === 'owner' || currentUser.email === ADMIN_EMAIL) {
-                document.getElementById('nav-admin').classList.remove('hidden');
-            }
-            showLoading(false);
-            showBooking();
+// ===== AUTH LOGIC (SỬA LỖI TREO) =====
+document.getElementById("btn-login").onclick = () => {
+    hienLoading(true);
+    auth.signInWithPopup(provider).catch(err => {
+        console.error(err);
+        hienLoading(false);
+        alert("Lỗi đăng nhập: " + err.message);
+    });
+};
+
+document.getElementById("btn-logout").onclick = () => auth.signOut();
+
+auth.onAuthStateChanged(async (user) => {
+    hienLoading(true); // Luôn hiện loading khi trạng thái thay đổi
+    if (!user) {
+        document.getElementById("login-screen").classList.remove("hidden");
+        document.getElementById("app").classList.add("hidden");
+        hienLoading(false);
+        return;
+    }
+
+    try {
+        document.getElementById("login-screen").classList.add("hidden");
+        document.getElementById("app").classList.remove("hidden");
+        document.getElementById("user-name").innerText = user.displayName;
+
+        const doc = await db.collection("users").doc(user.uid).get();
+
+        if (!doc.exists) {
+            document.getElementById("role-screen").classList.remove("hidden");
+            document.getElementById("main-content").innerHTML = "";
+        } else {
+            const duLieuNguoiDung = doc.data();
+            document.getElementById("role-screen").classList.add("hidden");
+            khoiTaoMenuTheoVaiTro(duLieuNguoiDung);
         }
+    } catch (error) {
+        console.error("Lỗi Firestore:", error);
+        alert("Không thể tải dữ liệu người dùng. Hãy kiểm tra phân quyền Firestore!");
+    } finally {
+        hienLoading(false); // Đảm bảo luôn tắt loading
+    }
+});
 
-        // --- 3. BOOKING LOGIC ---
-        function showBooking() {
-            const app = document.getElementById('app-content');
-            app.innerHTML = `
-                <h2 class="text-xl font-bold mb-4">LỊCH SÂN HÔM NAY</h2>
-                <div id="slots-grid" class="grid grid-cols-2 gap-3"></div>
-            `;
-            
-            // Listen for changes
-            db.collection('bookings').onSnapshot(snapshot => {
-                const booked = {};
-                snapshot.forEach(doc => { booked[doc.id] = doc.data(); });
-                renderSlots(booked);
-            });
-        }
+async function chonVaiTro(vaiTro) {
+    hienLoading(true);
+    const user = auth.currentUser;
+    const duLieuMoi = {
+        uid: user.uid,
+        ten: user.displayName,
+        email: user.email,
+        vaiTro: vaiTro,
+        taoLuc: firebase.firestore.FieldValue.serverTimestamp()
+    };
 
-        function renderSlots(booked) {
-            const grid = document.getElementById('slots-grid');
-            if (!grid) return;
-            grid.innerHTML = '';
-            const hours = ["05:00","06:00","07:00","08:00","17:00","18:00","19:00","20:00","21:00","22:00"];
-            
-            hours.forEach(h => {
-                const status = booked[h] ? (booked[h].status === 'confirmed' ? 'booked' : 'pending') : 'available';
-                const btn = document.createElement('div');
-                btn.className = `p-4 rounded-xl text-center text-white font-bold transition-all shadow-sm ${
-                    status === 'booked' ? 'slot-booked' : (status === 'pending' ? 'slot-pending' : 'slot-available')
-                }`;
-                btn.innerHTML = `${h}<br><span class="text-xs">${status === 'booked' ? 'ĐÃ ĐẶT' : (status === 'pending' ? 'CHỜ DUYỆT' : 'TRỐNG')}</span>`;
-                
-                if (status === 'available') {
-                    btn.onclick = () => openBookingModal(h);
-                }
-                grid.appendChild(btn);
-            });
-        }
+    try {
+        await db.collection("users").doc(user.uid).set(duLieuMoi);
+        document.getElementById("role-screen").classList.add("hidden");
+        khoiTaoMenuTheoVaiTro(duLieuMoi);
+    } catch (error) {
+        alert("Lỗi lưu vai trò: " + error.message);
+    } finally {
+        hienLoading(false);
+    }
+}
 
-        function openBookingModal(h) {
-            selectedSlot = h;
-            document.getElementById('modal-slot-info').innerText = "Giờ đặt: " + h;
-            document.getElementById('booking-modal').classList.remove('hidden');
-        }
+function khoiTaoMenuTheoVaiTro(userDoc) {
+    const nav = document.getElementById("bottom-nav");
+    const main = document.getElementById("main-content");
+    nav.innerHTML = "";
 
-        function closeModal() {
-            document.getElementById('booking-modal').classList.add('hidden');
-        }
+    const btnClass = "sport-font text-[10px] tracking-widest flex flex-col items-center gap-1";
 
-        async function confirmBooking() {
-            if (!selectedSlot || !currentUser) return;
-            showLoading(true);
-            try {
-                await db.collection('bookings').doc(selectedSlot).set({
-                    user: currentUser.displayName,
-                    uid: currentUser.uid,
-                    time: selectedSlot,
-                    status: 'pending',
-                    timestamp: firebase.firestore.FieldValue.serverTimestamp()
-                });
-                closeModal();
-                alert("Đã gửi đơn! Chờ Admin duyệt trong 30s.");
-            } catch (e) {
-                alert("Lỗi: " + e.message);
-            }
-            showLoading(false);
-        }
-
-        // --- 4. ADMIN LOGIC ---
-        function showAdmin() {
-            const app = document.getElementById('app-content');
-            app.innerHTML = `<h2 class="text-xl font-bold mb-4 text-red-600">QUẢN LÝ ĐƠN ĐẶT</h2><div id="admin-list" class="space-y-4"></div>`;
-            
-            db.collection('bookings').where('status', '==', 'pending').onSnapshot(snapshot => {
-                const list = document.getElementById('admin-list');
-                if (!list) return;
-                list.innerHTML = snapshot.empty ? '<p class="text-gray-500">Chưa có đơn nào cần duyệt.</p>' : '';
-                snapshot.forEach(doc => {
-                    const data = doc.data();
-                    const item = document.createElement('div');
-                    item.className = "bg-white p-4 rounded-xl shadow border-l-4 border-yellow-500 flex justify-between items-center";
-                    item.innerHTML = `
-                        <div>
-                            <p class="font-bold">${data.time}</p>
-                            <p class="text-sm text-gray-600">${data.user}</p>
-                        </div>
-                        <button onclick="approveBooking('${doc.id}')" class="bg-green-500 text-white px-4 py-2 rounded-lg text-sm">DUYỆT</button>
-                    `;
-                    list.appendChild(item);
-                });
-            });
-        }
-
-        async function approveBooking(id) {
-            showLoading(true);
-            await db.collection('bookings').doc(id).update({ status: 'confirmed' });
-            showLoading(false);
-        }
-
-        function showLoading(show) {
-            document.getElementById('loading').style.display = show ? 'flex' : 'none';
-        }
-    </script>
+    if (userDoc.vaiTro === "player") {
+        nav.innerHTML = `
+            <button class="${btnClass} text-lime-400"><span>🏟️</span> ĐẶT SÂN</button>
+            <button class="${btnClass} text-gray-400"><span>🏆</span> BẢNG HẠNG</button>
+            <button class="${btnClass} text-gray-400"><span>👤</span> HỒ SƠ</button>`;
+        main.innerHTML = `<h2 class="sport-font text-2xl">Chào mừng Chiến binh!</h2><p class="mt-2">Sẵn sàng để leo Rank hôm nay?</p>`;
+    } else {
+        nav.innerHTML = `
+            <button class="${btnClass} text-blue-400"><span>📊</span> QUẢN LÝ</button>
+            <button class="${btnClass} text-gray-400"><span>📅</span> LỊCH ĐẶT</button>`;
+        main.innerHTML = `<h2 class="sport-font text-2xl">Chào Chủ sân!</h2><p class="mt-2">Hôm nay có 0 lịch đặt mới.</p>`;
+    }
+}
+</script>
 </body>
 </html>
