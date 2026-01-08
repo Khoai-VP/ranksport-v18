@@ -2,10 +2,9 @@
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
-    <title>RankSport - Test Luồng Tổng Hợp</title>
+    <title>RankSport - Module 3: Navigation</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="https://cdn.tailwindcss.com"></script>
-    
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
@@ -15,51 +14,52 @@
         .sport-font { font-family: 'Oswald', sans-serif; text-transform: uppercase; }
         body { font-family: 'Inter', sans-serif; background-color: #0f172a; color: white; }
         .glass-card { background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.1); }
+        .active-tab { color: #a3e635; border-top: 2px solid #a3e635; }
     </style>
 </head>
 <body class="pb-24">
 
     <div id="loading" class="hidden fixed inset-0 bg-black bg-opacity-80 flex flex-col items-center justify-center z-50">
         <div class="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-lime-400"></div>
-        <p class="mt-4 sport-font text-lime-400 tracking-widest text-xs">Đang xử lý...</p>
     </div>
 
-    <div id="login-screen" class="min-h-screen hidden flex flex-col justify-center items-center px-6">
-        <h1 class="text-6xl sport-font italic text-lime-400 leading-none">RANK<span class="text-white">SPORT</span></h1>
-        <button id="btn-login" class="mt-12 w-full max-w-xs bg-white text-black font-bold py-4 px-6 rounded-full flex items-center justify-center gap-3 hover:bg-lime-400 transition-all shadow-xl">
-            <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="20" alt="google">
+    <div id="login-screen" class="min-h-screen hidden flex flex-col justify-center items-center px-6 text-center">
+        <h1 class="text-6xl sport-font italic text-lime-400">RANK<span class="text-white">SPORT</span></h1>
+        <button id="btn-login" class="mt-12 w-full max-w-xs bg-white text-black font-bold py-4 px-6 rounded-full flex items-center justify-center gap-3 shadow-xl">
             ĐĂNG NHẬP VỚI GOOGLE
         </button>
     </div>
 
     <div id="app" class="hidden">
         <header class="bg-slate-900 border-b border-slate-800 p-4 flex justify-between items-center sticky top-0 z-40">
-            <span class="sport-font text-xl text-lime-400 italic font-bold">RANK<span class="text-white">S</span></span>
+            <span class="sport-font text-xl text-lime-400 italic font-bold tracking-tighter">RANK<span class="text-white">S</span></span>
             <div class="flex items-center gap-3">
                 <span id="user-name" class="text-[10px] font-semibold uppercase text-gray-400"></span>
-                <button id="btn-logout" class="text-[10px] border border-red-500 text-red-500 px-2 py-1 rounded hover:bg-red-500 hover:text-white transition">THOÁT</button>
+                <button id="btn-logout" class="text-[10px] border border-red-500 text-red-500 px-2 py-1 rounded">THOÁT</button>
             </div>
         </header>
 
         <div id="role-screen" class="hidden p-8 flex flex-col items-center justify-center min-h-[70vh]">
-            <h2 class="text-3xl sport-font italic mb-8">BẠN LÀ AI?</h2>
-            <div class="grid grid-cols-1 gap-6 w-full max-w-sm">
-                <button onclick="chonVaiTro('player')" class="glass-card p-8 rounded-2xl hover:border-lime-400 transition-all text-center">
-                    <div class="text-4xl mb-2">👟</div>
-                    <div class="sport-font text-2xl text-lime-400 font-bold">VẬN ĐỘNG VIÊN</div>
+            <h2 class="text-2xl sport-font italic mb-8">CHỌN VAI TRÒ CỦA BẠN</h2>
+            <div class="grid grid-cols-1 gap-4 w-full max-w-xs">
+                <button onclick="chonVaiTro('player')" class="glass-card p-6 rounded-xl hover:border-lime-400 transition-all text-center">
+                    <div class="text-3xl mb-1">👟</div>
+                    <div class="sport-font text-xl text-lime-400">VẬN ĐỘNG VIÊN</div>
                 </button>
-                <button onclick="chonVaiTro('owner')" class="glass-card p-8 rounded-2xl hover:border-blue-400 transition-all text-center">
-                    <div class="text-4xl mb-2">🏟️</div>
-                    <div class="sport-font text-2xl text-blue-400 font-bold">CHỦ SÂN</div>
+                <button onclick="chonVaiTro('owner')" class="glass-card p-6 rounded-xl hover:border-blue-400 transition-all text-center">
+                    <div class="text-3xl mb-1">🏟️</div>
+                    <div class="sport-font text-xl text-blue-400">CHỦ SÂN</div>
                 </button>
             </div>
         </div>
 
-        <main id="main-content" class="p-6"></main>
+        <main id="main-content" class="p-6 min-h-[60vh]"></main>
+
+        <nav id="bottom-nav" class="fixed bottom-0 left-0 right-0 bg-slate-900/95 backdrop-blur-md border-t border-slate-800 flex justify-around p-2 shadow-2xl z-50">
+        </nav>
     </div>
 
     <script>
-        // --- CẤU HÌNH FIREBASE ---
         const firebaseConfig = {
             apiKey: "AIzaSyBpytj0KQybf55iabBzmeg59VL-9oADPHA",
             authDomain: "badrank-89mrd.firebaseapp.com",
@@ -77,82 +77,79 @@
             document.getElementById("loading").classList.toggle("hidden", !bat);
         }
 
-        // --- LOGIC XÁC THỰC ---
         document.getElementById("btn-login").onclick = () => {
             hienLoading(true);
-            auth.signInWithPopup(provider).catch(err => {
-                hienLoading(false);
-                alert("Lỗi: " + err.message);
-            });
+            auth.signInWithPopup(provider).catch(err => { hienLoading(false); alert(err.message); });
         };
 
         document.getElementById("btn-logout").onclick = () => auth.signOut();
 
         auth.onAuthStateChanged(async (user) => {
             hienLoading(true);
-            const loginScreen = document.getElementById("login-screen");
-            const appScreen = document.getElementById("app");
-            const userNameDisplay = document.getElementById("user-name");
-
             if (!user) {
-                loginScreen.classList.remove("hidden");
-                appScreen.classList.add("hidden");
+                document.getElementById("login-screen").classList.remove("hidden");
+                document.getElementById("app").classList.add("hidden");
                 hienLoading(false);
                 return;
             }
 
-            loginScreen.classList.add("hidden");
-            appScreen.classList.remove("hidden");
-            userNameDisplay.innerText = user.displayName;
+            document.getElementById("login-screen").classList.add("hidden");
+            document.getElementById("app").classList.remove("hidden");
+            document.getElementById("user-name").innerText = user.displayName;
 
-            try {
-                const userDoc = await db.collection("users").doc(user.uid).get();
-                if (!userDoc.exists) {
-                    document.getElementById("role-screen").classList.remove("hidden");
-                    document.getElementById("main-content").innerHTML = "";
-                } else {
-                    document.getElementById("role-screen").classList.add("hidden");
-                    hienThiThanhCong(userDoc.data());
-                }
-            } catch (error) {
-                console.error(error);
-            } finally {
-                hienLoading(false);
+            const userDoc = await db.collection("users").doc(user.uid).get();
+            if (!userDoc.exists) {
+                document.getElementById("role-screen").classList.remove("hidden");
+            } else {
+                document.getElementById("role-screen").classList.add("hidden");
+                setupNavigation(userDoc.data().vaiTro);
             }
+            hienLoading(false);
         });
 
-        // --- LOGIC VAI TRÒ ---
         async function chonVaiTro(vaiTro) {
             hienLoading(true);
             const user = auth.currentUser;
-            try {
-                const duLieu = {
-                    uid: user.uid,
-                    ten: user.displayName,
-                    email: user.email,
-                    vaiTro: vaiTro,
-                    taoLuc: firebase.firestore.FieldValue.serverTimestamp()
-                };
-                await db.collection("users").doc(user.uid).set(duLieu);
-                document.getElementById("role-screen").classList.add("hidden");
-                hienThiThanhCong(duLieu);
-            } catch (error) {
-                alert("Lỗi: " + error.message);
-            } finally {
-                hienLoading(false);
-            }
+            const duLieu = {
+                uid: user.uid, ten: user.displayName, email: user.email,
+                vaiTro: vaiTro, taoLuc: firebase.firestore.FieldValue.serverTimestamp()
+            };
+            await db.collection("users").doc(user.uid).set(duLieu);
+            // Quan trọng: Sau khi lưu, gọi luôn hàm setupNavigation để hết bị "Undefined"
+            document.getElementById("role-screen").classList.add("hidden");
+            setupNavigation(vaiTro);
+            hienLoading(false);
         }
 
-        function hienThiThanhCong(userData) {
+        // --- MODULE 3: ĐIỀU HƯỚNG TỰ ĐỘNG ---
+        function setupNavigation(vaiTro) {
+            const nav = document.getElementById("bottom-nav");
             const main = document.getElementById("main-content");
-            const mau = userData.vaiTro === 'player' ? 'lime-400' : 'blue-400';
-            main.innerHTML = `
-                <div class="glass-card p-6 rounded-xl border border-${mau}/30 text-center">
-                    <h2 class="sport-font text-2xl text-${mau}">Xác thực OK!</h2>
-                    <p class="mt-2 text-gray-300 font-bold uppercase">${userData.vaiTro}</p>
-                    <p class="text-[10px] mt-4 text-gray-500 italic">Báo lại cho Đối tác lập trình để tiếp tục Module 3...</p>
-                </div>
-            `;
+            nav.innerHTML = ""; // Xóa menu cũ
+
+            const tabs = vaiTro === 'player' 
+                ? [ {n: 'SÀN ĐẤU', i: '🏟️'}, {n: 'HẠNG', i: '🏆'}, {n: 'HỒ SƠ', i: '👤'} ]
+                : [ {n: 'QUẢN LÝ', i: '📊'}, {n: 'LỊCH ĐẶT', i: '📅'}, {n: 'CÀI ĐẶT', i: '⚙️'} ];
+
+            tabs.forEach((tab, index) => {
+                const btn = document.createElement('button');
+                btn.className = "flex flex-col items-center p-2 text-[10px] sport-font text-gray-500 transition-all";
+                if(index === 0) btn.classList.add('text-lime-400'); // Tab đầu tiên mặc định sáng
+                btn.innerHTML = `<span class="text-xl">${tab.i}</span>${tab.n}`;
+                btn.onclick = () => {
+                    // Xử lý chuyển tab sau này
+                    document.querySelectorAll('#bottom-nav button').forEach(b => b.classList.remove('text-lime-400'));
+                    btn.classList.add('text-lime-400');
+                    main.innerHTML = `<h2 class="sport-font text-xl">ĐANG TẢI: ${tab.n}...</h2>`;
+                };
+                nav.appendChild(btn);
+            });
+
+            // Hiển thị mặc định trang đầu tiên
+            main.innerHTML = `<div class="glass-card p-6 rounded-xl border border-lime-400/20 text-center">
+                <h3 class="sport-font text-lime-400 italic">Chào mừng ${vaiTro === 'player' ? 'Chiến binh' : 'Chủ sân'}</h3>
+                <p class="text-xs text-gray-400 mt-2 italic">Module 3 (Nav) đã hoạt động. Sẵn sàng cho Module 4 & 5.</p>
+            </div>`;
         }
     </script>
 </body>
