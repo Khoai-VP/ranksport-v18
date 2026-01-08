@@ -1,0 +1,159 @@
+﻿<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>RankSport - Test Luồng Tổng Hợp</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Oswald:wght@700&family=Inter:wght@400;600&display=swap');
+        .sport-font { font-family: 'Oswald', sans-serif; text-transform: uppercase; }
+        body { font-family: 'Inter', sans-serif; background-color: #0f172a; color: white; }
+        .glass-card { background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.1); }
+    </style>
+</head>
+<body class="pb-24">
+
+    <div id="loading" class="hidden fixed inset-0 bg-black bg-opacity-80 flex flex-col items-center justify-center z-50">
+        <div class="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-lime-400"></div>
+        <p class="mt-4 sport-font text-lime-400 tracking-widest text-xs">Đang xử lý...</p>
+    </div>
+
+    <div id="login-screen" class="min-h-screen hidden flex flex-col justify-center items-center px-6">
+        <h1 class="text-6xl sport-font italic text-lime-400 leading-none">RANK<span class="text-white">SPORT</span></h1>
+        <button id="btn-login" class="mt-12 w-full max-w-xs bg-white text-black font-bold py-4 px-6 rounded-full flex items-center justify-center gap-3 hover:bg-lime-400 transition-all shadow-xl">
+            <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="20" alt="google">
+            ĐĂNG NHẬP VỚI GOOGLE
+        </button>
+    </div>
+
+    <div id="app" class="hidden">
+        <header class="bg-slate-900 border-b border-slate-800 p-4 flex justify-between items-center sticky top-0 z-40">
+            <span class="sport-font text-xl text-lime-400 italic font-bold">RANK<span class="text-white">S</span></span>
+            <div class="flex items-center gap-3">
+                <span id="user-name" class="text-[10px] font-semibold uppercase text-gray-400"></span>
+                <button id="btn-logout" class="text-[10px] border border-red-500 text-red-500 px-2 py-1 rounded hover:bg-red-500 hover:text-white transition">THOÁT</button>
+            </div>
+        </header>
+
+        <div id="role-screen" class="hidden p-8 flex flex-col items-center justify-center min-h-[70vh]">
+            <h2 class="text-3xl sport-font italic mb-8">BẠN LÀ AI?</h2>
+            <div class="grid grid-cols-1 gap-6 w-full max-w-sm">
+                <button onclick="chonVaiTro('player')" class="glass-card p-8 rounded-2xl hover:border-lime-400 transition-all text-center">
+                    <div class="text-4xl mb-2">👟</div>
+                    <div class="sport-font text-2xl text-lime-400 font-bold">VẬN ĐỘNG VIÊN</div>
+                </button>
+                <button onclick="chonVaiTro('owner')" class="glass-card p-8 rounded-2xl hover:border-blue-400 transition-all text-center">
+                    <div class="text-4xl mb-2">🏟️</div>
+                    <div class="sport-font text-2xl text-blue-400 font-bold">CHỦ SÂN</div>
+                </button>
+            </div>
+        </div>
+
+        <main id="main-content" class="p-6"></main>
+    </div>
+
+    <script>
+        // --- CẤU HÌNH FIREBASE ---
+        const firebaseConfig = {
+            apiKey: "AIzaSyBpytj0KQybf55iabBzmeg59VL-9oADPHA",
+            authDomain: "badrank-89mrd.firebaseapp.com",
+            projectId: "badrank-89mrd",
+            storageBucket: "badrank-89mrd.appspot.com",
+            messagingSenderId: "951939105470",
+            appId: "1:951939105470:web:968f94f61f94d9b4b08705"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const db = firebase.firestore();
+        const provider = new firebase.auth.GoogleAuthProvider();
+
+        function hienLoading(bat) {
+            document.getElementById("loading").classList.toggle("hidden", !bat);
+        }
+
+        // --- LOGIC XÁC THỰC ---
+        document.getElementById("btn-login").onclick = () => {
+            hienLoading(true);
+            auth.signInWithPopup(provider).catch(err => {
+                hienLoading(false);
+                alert("Lỗi: " + err.message);
+            });
+        };
+
+        document.getElementById("btn-logout").onclick = () => auth.signOut();
+
+        auth.onAuthStateChanged(async (user) => {
+            hienLoading(true);
+            const loginScreen = document.getElementById("login-screen");
+            const appScreen = document.getElementById("app");
+            const userNameDisplay = document.getElementById("user-name");
+
+            if (!user) {
+                loginScreen.classList.remove("hidden");
+                appScreen.classList.add("hidden");
+                hienLoading(false);
+                return;
+            }
+
+            loginScreen.classList.add("hidden");
+            appScreen.classList.remove("hidden");
+            userNameDisplay.innerText = user.displayName;
+
+            try {
+                const userDoc = await db.collection("users").doc(user.uid).get();
+                if (!userDoc.exists) {
+                    document.getElementById("role-screen").classList.remove("hidden");
+                    document.getElementById("main-content").innerHTML = "";
+                } else {
+                    document.getElementById("role-screen").classList.add("hidden");
+                    hienThiThanhCong(userDoc.data());
+                }
+            } catch (error) {
+                console.error(error);
+            } finally {
+                hienLoading(false);
+            }
+        });
+
+        // --- LOGIC VAI TRÒ ---
+        async function chonVaiTro(vaiTro) {
+            hienLoading(true);
+            const user = auth.currentUser;
+            try {
+                const duLieu = {
+                    uid: user.uid,
+                    ten: user.displayName,
+                    email: user.email,
+                    vaiTro: vaiTro,
+                    taoLuc: firebase.firestore.FieldValue.serverTimestamp()
+                };
+                await db.collection("users").doc(user.uid).set(duLieu);
+                document.getElementById("role-screen").classList.add("hidden");
+                hienThiThanhCong(duLieu);
+            } catch (error) {
+                alert("Lỗi: " + error.message);
+            } finally {
+                hienLoading(false);
+            }
+        }
+
+        function hienThiThanhCong(userData) {
+            const main = document.getElementById("main-content");
+            const mau = userData.vaiTro === 'player' ? 'lime-400' : 'blue-400';
+            main.innerHTML = `
+                <div class="glass-card p-6 rounded-xl border border-${mau}/30 text-center">
+                    <h2 class="sport-font text-2xl text-${mau}">Xác thực OK!</h2>
+                    <p class="mt-2 text-gray-300 font-bold uppercase">${userData.vaiTro}</p>
+                    <p class="text-[10px] mt-4 text-gray-500 italic">Báo lại cho Đối tác lập trình để tiếp tục Module 3...</p>
+                </div>
+            `;
+        }
+    </script>
+</body>
+</html>
