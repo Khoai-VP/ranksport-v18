@@ -2,7 +2,7 @@
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
-    <title>RankSport v8.5 - Final Master</title>
+    <title>RankSport v9.0 - Stable Version</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
@@ -16,11 +16,10 @@
         .grid-cell { border: 0.5px solid #f1f5f9; height: 50px; display: flex; align-items: center; justify-content: center; cursor: pointer; }
         .header-cell { background: #0f172a; color: white; position: sticky; top: 0; z-index: 30; font-family: 'Oswald'; }
         .cell-time { background: #f8fafc; font-weight: 800; border-right: 2px solid #cbd5e1; position: sticky; left: 0; z-index: 20; font-size: 11px; }
-        /* Fix màu sắc rõ ràng */
+        /* Giữ nguyên bảng màu ông đã test ok */
         .is-cl { border-left: 6px solid #10b981 !important; background: #f0fdf4 !important; color: #065f46 !important; font-weight: 900; }
         .is-pb { border-left: 6px solid #3b82f6 !important; background: #eff6ff !important; color: #1e40af !important; font-weight: 900; }
         .is-selecting { background: #dbeafe !important; border: 2px solid #2563eb !important; }
-        .no-scrollbar::-webkit-scrollbar { display: none; }
     </style>
 </head>
 <body class="pb-32">
@@ -30,23 +29,30 @@
     </div>
 
     <header class="bg-white border-b p-4 sticky top-0 z-40 flex justify-between items-center shadow-sm">
-        <span class="font-black italic text-xl text-blue-600">RANK<span class="text-slate-900">S</span></span>
-        <div id="user-info" class="text-[9px] font-black text-slate-500 bg-slate-100 px-3 py-1.5 rounded-full uppercase">...</div>
+        <span class="font-black italic text-xl text-blue-600 uppercase">RankSport</span>
+        <div class="flex items-center gap-3">
+            <div id="user-info" class="text-[10px] font-black text-slate-500 bg-slate-100 px-3 py-1.5 rounded-full uppercase italic">...</div>
+            <button onclick="auth.signOut()" class="text-[10px] font-black text-red-500 border border-red-200 px-3 py-1.5 rounded-full hover:bg-red-50 transition-all">ĐĂNG XUẤT</button>
+        </div>
     </header>
 
     <main id="main-content" class="p-4 max-w-5xl mx-auto space-y-6"></main>
 
     <div id="lock-panel" class="hidden fixed bottom-24 left-4 right-4 bg-slate-900 shadow-2xl rounded-3xl p-6 z-[50] text-white">
         <div class="flex justify-between items-center mb-4">
-            <div><div id="txt-duration" class="font-black text-xl italic uppercase">0 GIỜ</div><div id="txt-money" class="text-blue-400 text-xs font-bold">0 VNĐ</div></div>
+            <div>
+                <div id="txt-duration" class="font-black text-xl italic uppercase text-blue-400">0 GIỜ</div>
+                <div id="txt-money" class="text-white text-[10px] font-bold opacity-50">0 VNĐ</div>
+            </div>
             <div class="text-right">
-                <p class="text-[9px] text-slate-400 font-black mb-1">DỊCH VỤ THÊM</p>
-                <input type="text" id="input-service" oninput="formatCurrency(this)" class="bg-white/10 text-white font-black text-right border-b-2 border-blue-500 outline-none w-28 text-base" placeholder="0">
+                <p class="text-[9px] text-slate-400 font-black mb-1 italic uppercase">Dịch vụ & Phí thêm</p>
+                <input type="text" id="svc-name" class="bg-white/5 border-b border-white/20 text-white text-[11px] outline-none w-32 mb-1 block ml-auto" placeholder="Tên: Nước, vợt...">
+                <input type="text" id="svc-price" oninput="formatCurrency(this)" class="bg-white/10 text-white font-black text-right border-b-2 border-blue-500 outline-none w-32 text-sm block ml-auto" placeholder="Số tiền">
             </div>
         </div>
         <div class="flex gap-2">
             <button onclick="actionLock('locked')" class="flex-1 bg-blue-600 py-4 rounded-2xl font-black text-xs uppercase shadow-lg active:scale-95">Xác nhận đặt</button>
-            <button onclick="actionLock('empty')" class="flex-1 bg-slate-700 py-4 rounded-2xl font-black text-xs uppercase active:scale-95">Mở trống / Hủy</button>
+            <button onclick="actionLock('empty')" class="flex-1 bg-slate-700 py-4 rounded-2xl font-black text-xs uppercase active:scale-95">Mở trống sân</button>
         </div>
     </div>
 
@@ -57,7 +63,6 @@
     </nav>
 
     <script>
-        // --- CORE LOGIC (GIỮ NGUYÊN & FIX) ---
         const firebaseConfig = { apiKey: "AIzaSyBpytj0KQybf55iabBzmeg59VL-9oADPHA", authDomain: "badrank-89mrd.firebaseapp.com", projectId: "badrank-89mrd", storageBucket: "badrank-89mrd.appspot.com", messagingSenderId: "951939105470", appId: "1:951939105470:web:968f94f61f94d9b4b08705" };
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
@@ -78,30 +83,23 @@
         async function renderManagement() {
             showLoading(true);
             const doc = await db.collection("courts").doc(auth.currentUser.uid).get();
-            const d = doc.exists ? doc.data() : { ten:"", dc:"", ds:[] };
+            const d = doc.exists ? doc.data() : { ten:"", ds:[] };
             showLoading(false);
             document.getElementById("main-content").innerHTML = `
                 <div class="space-y-6">
                     <div class="bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
-                        <h2 class="font-black text-blue-600 mb-4 italic uppercase text-xs">Thông tin sân & Địa chỉ</h2>
-                        <input id="m-ten" value="${d.ten||''}" class="w-full p-4 mb-2 bg-slate-50 rounded-2xl font-bold" placeholder="Tên cụm sân">
-                        <input id="m-dc" value="${d.dc||''}" class="w-full p-4 bg-slate-50 rounded-2xl font-bold" placeholder="Địa chỉ chi tiết">
-                    </div>
-                    <div class="bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
-                        <h2 class="font-black text-slate-800 mb-4 italic uppercase text-xs">Quản lý sân</h2>
-                        <div class="flex gap-2 mb-4 bg-slate-900 p-3 rounded-2xl shadow-lg">
+                        <h2 class="font-black text-blue-600 mb-4 italic uppercase text-xs">Cài đặt sân</h2>
+                        <input id="m-ten" value="${d.ten||''}" class="w-full p-4 mb-4 bg-slate-50 rounded-2xl font-bold border-none" placeholder="Tên cụm sân">
+                        <div class="flex gap-2 mb-4 bg-slate-900 p-3 rounded-2xl">
                             <select id="m-type" class="flex-1 bg-transparent text-white font-bold outline-none"><option>Cầu lông</option><option>Pickleball</option></select>
                             <input id="m-count" type="number" class="w-16 rounded-xl text-center font-bold" placeholder="SL">
                             <button onclick="addCourts()" class="bg-blue-600 text-white px-4 rounded-xl font-black text-[10px]">THÊM</button>
                         </div>
-                        <div class="overflow-x-auto"><table class="w-full text-xs">
-                            <tbody id="court-list">${(d.ds||[]).map(s => `
-                                <tr class="border-b"><td class="py-4 font-black c-t">${s.t}</td><td class="font-bold text-slate-400 c-l">${s.l}</td>
-                                <td><input oninput="formatCurrency(this)" class="w-full text-right font-mono font-black text-blue-600 c-g bg-transparent" value="${fmt(s.g)}"></td>
-                                <td class="text-right"><button onclick="this.closest('tr').remove()" class="text-red-400 px-2 font-bold">✕</button></td></tr>`).join('')}
-                            </tbody></table></div>
+                        <table class="w-full text-xs">
+                            <tbody id="court-list">${(d.ds||[]).map(s => `<tr class="border-b"><td class="py-4 font-black c-t">${s.t}</td><td class="font-bold text-slate-400 c-l">${s.l}</td><td><input oninput="formatCurrency(this)" class="w-full text-right font-black text-blue-600 c-g bg-transparent" value="${fmt(s.g)}"></td><td class="text-right"><button onclick="this.closest('tr').remove()" class="text-red-400">✕</button></td></tr>`).join('')}</tbody>
+                        </table>
                     </div>
-                    <button onclick="saveC()" class="w-full bg-blue-600 text-white py-5 rounded-3xl font-black uppercase shadow-xl active:scale-95 transition-all">Lưu cấu hình</button>
+                    <button onclick="saveC()" class="w-full bg-blue-600 text-white py-5 rounded-3xl font-black uppercase shadow-xl">LƯU CẤU HÌNH</button>
                 </div>`;
         }
 
@@ -109,17 +107,15 @@
             const c = parseInt(document.getElementById("m-count").value), t = document.getElementById("m-type").value; if(!c) return;
             const list = document.getElementById("court-list");
             for(let i=1; i<=c; i++) {
-                list.insertAdjacentHTML('beforeend', `<tr class="border-b"><td class="py-4 font-black c-t">Sân ${list.rows.length+1} [${t==='Cầu lông'?'CL':'PB'}]</td><td class="font-bold text-slate-400 c-l">${t}</td>
-                <td><input oninput="formatCurrency(this)" class="w-full text-right font-mono font-black text-blue-600 c-g bg-transparent" value="100.000"></td>
-                <td class="text-right"><button onclick="this.closest('tr').remove()" class="text-red-400 px-2 font-bold">✕</button></td></tr>`);
+                list.insertAdjacentHTML('beforeend', `<tr class="border-b"><td class="py-4 font-black c-t">Sân ${list.rows.length+1}</td><td class="font-bold text-slate-400 c-l">${t}</td><td><input oninput="formatCurrency(this)" class="w-full text-right font-black text-blue-600 c-g bg-transparent" value="100.000"></td><td class="text-right"><button onclick="this.closest('tr').remove()" class="text-red-400">✕</button></td></tr>`);
             }
         }
 
         async function saveC() {
             showLoading(true);
             const ds = []; document.querySelectorAll("#court-list tr").forEach(tr => ds.push({ t:tr.querySelector(".c-t").innerText, l:tr.querySelector(".c-l").innerText, g:getRaw(tr.querySelector(".c-g").value) }));
-            await db.collection("courts").doc(auth.currentUser.uid).set({ ten:document.getElementById("m-ten").value, dc:document.getElementById("m-dc").value, ds }, {merge:true});
-            showLoading(false); alert("Đã lưu!");
+            await db.collection("courts").doc(auth.currentUser.uid).set({ ten:document.getElementById("m-ten").value, ds }, {merge:true});
+            showLoading(false); alert("Đã lưu cấu hình sân!");
         }
 
         // --- TAB 2: LỊCH ĐẶT ---
@@ -130,21 +126,18 @@
             const d = doc.data(); window.courtConfig = d.ds;
             const date = window.currentDate || new Date().toISOString().split('T')[0];
             document.getElementById("main-content").innerHTML = `
-                <div class="bg-white p-4 rounded-[2.5rem] shadow-sm border border-slate-100">
+                <div class="bg-white p-4 rounded-[2rem] shadow-sm">
                     <div class="flex justify-between items-center mb-4 px-2">
-                        <div><h2 class="font-black text-sm italic uppercase">${d.ten||'QUẢN LÝ LỊCH'}</h2><p class="text-[9px] font-bold text-slate-400 uppercase">${date}</p></div>
-                        <input type="date" value="${date}" onchange="changeDate(this.value)" class="text-[10px] font-black bg-slate-100 p-3 rounded-2xl outline-none border-none">
+                        <h2 class="font-black text-[11px] uppercase italic text-slate-400">${d.ten}</h2>
+                        <input type="date" value="${date}" onchange="changeDate(this.value)" class="text-[10px] font-black bg-slate-100 p-2 rounded-xl border-none">
                     </div>
-                    <div class="overflow-x-auto rounded-[2rem] border-2 border-slate-50 shadow-inner">
+                    <div class="overflow-x-auto rounded-[1.5rem] border shadow-inner no-scrollbar">
                         <div class="grid-container" style="--num-courts: ${d.ds.length}">
                             <div class="grid-cell header-cell text-[9px]">GIỜ</div>
-                            ${d.ds.map(s => {
-                                const isCL = s.l.includes('Cầu');
-                                return `<div class="grid-cell header-cell flex flex-col pt-1 border-b-4 ${isCL?'border-emerald-500':'border-blue-500'}">
-                                    <span class="text-[9px] font-black leading-none">${s.t}</span>
-                                    <span class="text-[6px] opacity-60 mt-1 uppercase">${isCL?'BADMINTON':'PICKLEBALL'}</span>
-                                </div>`;
-                            }).join('')}
+                            ${d.ds.map(s => `<div class="grid-cell header-cell flex flex-col pt-1 border-b-4 ${s.l.includes('Cầu')?'border-emerald-500':'border-blue-500'}">
+                                <span class="text-[9px] font-black uppercase">${s.t}</span>
+                                <span class="text-[6px] opacity-60 uppercase">${s.l}</span>
+                            </div>`).join('')}
                             ${generateRows(d.ds)}
                         </div>
                     </div>
@@ -160,21 +153,13 @@
         }
 
         function toggle(el) {
-            if (el.classList.contains('is-cl') || el.classList.contains('is-pb')) {
-                document.querySelectorAll(".is-selecting").forEach(c => c.classList.remove("is-selecting"));
-                el.classList.add("is-selecting");
-                document.getElementById("lock-panel").classList.remove("hidden");
-                document.getElementById("txt-duration").innerText = "ĐANG KHÓA";
-                document.getElementById("txt-money").innerText = "Bấm 'Mở trống' để hủy";
-                return;
-            }
             el.classList.toggle("is-selecting");
             const sel = document.querySelectorAll(".is-selecting"), panel = document.getElementById("lock-panel");
             if(sel.length > 0) {
                 panel.classList.remove("hidden");
                 let m = 0; sel.forEach(c => m += parseFloat(c.dataset.price || 0));
                 document.getElementById("txt-duration").innerText = (sel.length * 0.5).toFixed(1) + " GIỜ";
-                document.getElementById("txt-money").innerText = fmt(m) + " VNĐ";
+                document.getElementById("txt-money").innerText = fmt(m) + " VNĐ TIỀN SÂN";
             } else panel.classList.add("hidden");
         }
 
@@ -184,11 +169,17 @@
             const updates = {};
             sel.forEach((el, i) => {
                 if(type==='empty') updates[el.dataset.slot] = firebase.firestore.FieldValue.delete();
-                else updates[el.dataset.slot] = { s:'locked', p:parseFloat(el.dataset.price), v: i===0?getRaw(document.getElementById("input-service").value):0 };
+                else updates[el.dataset.slot] = { 
+                    s:'locked', 
+                    p:parseFloat(el.dataset.price), 
+                    v: i===0 ? getRaw(document.getElementById("svc-price").value) : 0,
+                    n: i===0 ? document.getElementById("svc-name").value : ""
+                };
             });
             await db.collection("bookings").doc(`${auth.currentUser.uid}_${date}`).set(updates, {merge:true});
             document.getElementById("lock-panel").classList.add("hidden");
-            document.getElementById("input-service").value = "";
+            document.getElementById("svc-name").value = "";
+            document.getElementById("svc-price").value = "";
             renderBookingGrid();
         }
 
@@ -202,14 +193,14 @@
                     const idx = k.split('_').pop();
                     const isCL = ds[idx].l.includes('Cầu');
                     el.className = `grid-cell ${isCL?'is-cl':'is-pb'}`;
-                    el.innerHTML = `<div class="text-center"><span class="text-[7px] font-black block leading-tight">ĐÃ ĐẶT</span>${b[k].v > 0 ? `<span class="text-[6px] text-green-500 font-bold">+${fmt(b[k].v)}</span>` : ''}</div>`;
+                    el.innerHTML = `<div class="text-[7px] font-black text-center leading-none">ĐÃ ĐẶT<br><span class="text-[6px] opacity-60">${b[k].v > 0 ? '+'+fmt(b[k].v) : ''}</span></div>`;
                 }
             });
         }
 
         function changeDate(d) { window.currentDate = d; renderBookingGrid(); }
 
-        // --- TAB 3: DOANH THU ---
+        // --- TAB 3: DOANH THU (Có Biểu đồ tròn & Chi phí) ---
         async function renderRevenue() {
             showLoading(true);
             const date = window.currentDate || new Date().toISOString().split('T')[0];
@@ -217,14 +208,14 @@
             const courtDoc = await db.collection("courts").doc(auth.currentUser.uid).get();
             const expSnap = await db.collection("expenses").doc(`${auth.currentUser.uid}_${date}`).get();
             
-            let totalS=0, totalV=0, clR=0, pbR=0, expV = expSnap.exists ? expSnap.data().v : 0;
+            let clR=0, pbR=0, totalV=0, expV = expSnap.exists ? expSnap.data().v : 0;
             if(snap.exists && courtDoc.exists) {
                 const b = snap.data(), ds = courtDoc.data().ds;
                 Object.keys(b).forEach(k => {
                     if(b[k].s==='locked') {
-                        const idx = k.split('_').pop();
-                        totalS += b[k].p; totalV += b[k].v;
-                        if(ds[idx].l.includes('Cầu')) clR += b[k].p; else pbR += b[k].p;
+                        const idx = parseInt(k.split('_').pop());
+                        totalV += b[k].v;
+                        if(ds[idx] && ds[idx].l.includes('Cầu')) clR += b[k].p; else pbR += b[k].p;
                     }
                 });
             }
@@ -232,32 +223,47 @@
             document.getElementById("main-content").innerHTML = `
                 <div class="space-y-6">
                     <div class="bg-slate-900 p-8 rounded-[3rem] text-white shadow-xl relative overflow-hidden">
-                        <div class="flex justify-between items-start z-10 relative">
-                            <div><p class="text-[10px] opacity-50 font-black uppercase">Lợi nhuận ngày ${date}</p>
-                            <h2 class="text-4xl font-black text-blue-400 mt-1">${fmt(totalS + totalV - expV)}đ</h2></div>
-                            <input type="date" value="${date}" onchange="changeDateRev(this.value)" class="bg-white/10 p-2 rounded-xl text-xs font-bold outline-none">
+                        <div class="flex justify-between items-center mb-6 z-10 relative">
+                            <div><p class="text-[10px] opacity-50 font-black uppercase">Doanh thu ${date}</p>
+                            <h2 class="text-4xl font-black text-blue-400 mt-1">${fmt(clR + pbR + totalV)}đ</h2></div>
+                            <input type="date" value="${date}" onchange="changeDateRev(this.value)" class="bg-white/10 p-2 rounded-xl text-xs font-bold outline-none border-none">
                         </div>
-                        <div class="grid grid-cols-3 gap-3 mt-8 z-10 relative">
-                            <div class="bg-white/5 p-4 rounded-3xl text-center"><p class="text-[8px] opacity-40 uppercase mb-1">Tiền sân</p><p class="font-black text-xs">${fmt(totalS)}</p></div>
-                            <div class="bg-white/5 p-4 rounded-3xl text-center"><p class="text-[8px] opacity-40 uppercase mb-1">Dịch vụ</p><p class="font-black text-xs text-green-400">+${fmt(totalV)}</p></div>
-                            <div class="bg-white/5 p-4 rounded-3xl text-center"><p class="text-[8px] opacity-40 uppercase mb-1">Chi phí</p><p class="font-black text-xs text-red-400">-${fmt(expV)}</p></div>
+                        <div class="grid grid-cols-3 gap-2 z-10 relative">
+                            <div class="bg-white/5 p-3 rounded-2xl text-center"><p class="text-[8px] opacity-40 uppercase">Cầu lông</p><p class="font-black text-[10px] text-emerald-400">${fmt(clR)}</p></div>
+                            <div class="bg-white/5 p-3 rounded-2xl text-center"><p class="text-[8px] opacity-40 uppercase">Pickleball</p><p class="font-black text-[10px] text-blue-400">${fmt(pbR)}</p></div>
+                            <div class="bg-white/5 p-3 rounded-2xl text-center"><p class="text-[8px] opacity-40 uppercase">Dịch vụ</p><p class="font-black text-[10px] text-amber-400">${fmt(totalV)}</p></div>
                         </div>
                     </div>
 
-                    <div class="bg-white p-6 rounded-3xl shadow-sm border-t-8 border-red-500">
-                        <h3 class="font-black text-xs uppercase mb-4 italic">Nhập chi phí cố định hôm nay</h3>
-                        <div class="flex gap-2">
-                            <input id="exp-v" oninput="formatCurrency(this)" value="${fmt(expV)}" class="flex-1 p-4 bg-slate-50 rounded-2xl font-black text-sm" placeholder="Điện, nước, nhân viên...">
-                            <button onclick="saveExp()" class="bg-red-500 text-white px-8 rounded-2xl font-black text-xs shadow-lg active:scale-95">LƯU</button>
+                    <div class="bg-white p-6 rounded-3xl shadow-sm flex flex-col md:flex-row gap-8 items-center">
+                        <div class="w-full max-w-[150px]"><canvas id="typeChart"></canvas></div>
+                        <div class="flex-1 w-full space-y-4">
+                            <h3 class="font-black text-xs uppercase italic text-slate-400">Phân tách nguồn thu</h3>
+                            <div class="flex justify-between items-center bg-slate-50 p-3 rounded-2xl">
+                                <span class="text-xs font-bold">Chi phí ngày (-)</span>
+                                <input id="exp-v" oninput="formatCurrency(this)" value="${fmt(expV)}" class="w-24 text-right bg-transparent font-black text-red-500 outline-none" placeholder="0">
+                                <button onclick="saveExp()" class="bg-red-500 text-white px-3 py-1 rounded-lg text-[10px] font-black">LƯU</button>
+                            </div>
+                            <div class="flex justify-between items-center p-1">
+                                <span class="text-xs font-black uppercase">Lợi nhuận ròng:</span>
+                                <span class="text-xl font-black text-green-600">${fmt(clR + pbR + totalV - expV)}đ</span>
+                            </div>
                         </div>
                     </div>
 
                     <div class="bg-white p-6 rounded-3xl shadow-sm">
-                        <h3 class="font-black text-xs uppercase mb-6 italic">Biểu đồ 7 ngày gần nhất</h3>
-                        <canvas id="weeklyChart" height="200"></canvas>
+                        <h3 class="font-black text-xs uppercase mb-6 italic text-slate-400">Biểu đồ 7 ngày gần nhất</h3>
+                        <canvas id="weeklyChart" height="180"></canvas>
                     </div>
                 </div>`;
             
+            // Biểu đồ tròn
+            new Chart(document.getElementById('typeChart'), {
+                type: 'doughnut',
+                data: { labels: ['CL', 'PB'], datasets: [{ data: [clR, pbR], backgroundColor: ['#10b981', '#3b82f6'], borderWeight: 0, cutout: '75%' }] },
+                options: { plugins: { legend: { display: false } } }
+            });
+
             await drawWeekly(date); showLoading(false);
         }
 
@@ -275,14 +281,13 @@
                 let iso = d.toISOString().split('T')[0];
                 labels.push(d.getDate()+'/'+(d.getMonth()+1));
                 const snap = await db.collection("bookings").doc(`${auth.currentUser.uid}_${iso}`).get();
-                let dayTotal = 0;
-                if(snap.exists) { Object.values(snap.data()).forEach(v => { if(v.s==='locked') dayTotal += (v.p + v.v); }); }
+                let dayTotal = 0; if(snap.exists) { Object.values(snap.data()).forEach(v => { if(v.s==='locked') dayTotal += (v.p + v.v); }); }
                 data.push(dayTotal);
             }
             new Chart(document.getElementById('weeklyChart'), {
                 type: 'bar',
-                data: { labels, datasets: [{ label:'Doanh thu', data, backgroundColor:'#3b82f6', borderRadius:12 }] },
-                options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { font: { size: 9, weight:'bold' } } }, x: { ticks: { font: { size: 9, weight:'bold' } } } } }
+                data: { labels, datasets: [{ label:'Doanh thu', data, backgroundColor:'#0f172a', borderRadius:8 }] },
+                options: { plugins: { legend: { display: false } }, scales: { y: { display: false }, x: { grid: { display: false } } } }
             });
         }
         function changeDateRev(d) { window.currentDate = d; renderRevenue(); }
