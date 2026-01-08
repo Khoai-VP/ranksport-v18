@@ -2,7 +2,7 @@
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
-    <title>RankSport Pro - Quản lý & Đặt sân</title>
+    <title>RankSport Pro - Hệ thống Quản lý Sân Hybrid</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
@@ -10,47 +10,51 @@
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Oswald:wght@700&display=swap');
-        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; color: #1e293b; }
+        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; color: #1e293b; margin: 0; }
         .sport-font { font-family: 'Oswald', sans-serif; text-transform: uppercase; }
-        .card { background: white; border-radius: 16px; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); border: 1px solid #e2e8f0; }
-        .btn-primary { background: #2563eb; color: white; transition: all 0.2s; }
-        .btn-primary:hover { background: #1d4ed8; transform: translateY(-1px); }
-        /* Grid cho sơ đồ đặt sân */
-        .time-grid { display: grid; grid-template-columns: 80px repeat(auto-fill, minmax(60px, 1fr)); border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; }
-        .grid-header { background: #f1f5f9; font-weight: 700; padding: 12px; border-bottom: 1px solid #e2e8f0; text-align: center; }
-        .grid-item { padding: 10px; border-right: 1px solid #f1f5f9; border-bottom: 1px solid #f1f5f9; text-align: center; font-size: 12px; cursor: pointer; }
-        .status-empty { background: white; color: #94a3b8; }
-        .status-booked { background: #fee2e2; color: #ef4444; border: 1px solid #fecaca; pointer-events: none; }
-        .status-selecting { background: #dbeafe; border: 2px solid #2563eb; color: #2563eb; font-weight: 700; }
+        .grid-container { display: grid; grid-template-columns: 75px repeat(var(--num-courts, 1), minmax(100px, 1fr)); border: 1px solid #e2e8f0; background: white; }
+        .grid-cell { border: 0.5px solid #f1f5f9; height: 45px; display: flex; align-items: center; justify-content: center; font-size: 10px; cursor: pointer; transition: all 0.2s; }
+        .cell-time { background: #f8fafc; font-weight: bold; border-right: 2px solid #e2e8f0; position: sticky; left: 0; z-index: 10; }
+        .header-cell { background: #1e293b; color: white; position: sticky; top: 0; z-index: 20; font-family: 'Oswald'; }
+        .status-empty { color: #cbd5e1; }
+        .status-manual-locked { background: #1e293b !important; color: #fbbf24 !important; font-weight: 800; border: 1px solid #fbbf24; }
+        .status-booked { background: #ef4444 !important; color: white !important; font-weight: bold; }
+        .is-selecting { background: #dbeafe; border: 2px solid #2563eb !important; z-index: 5; }
+        .card { background: white; border-radius: 16px; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); }
+        input[type="date"]::-webkit-calendar-picker-indicator { cursor: pointer; }
     </style>
 </head>
-<body class="bg-slate-50 pb-20">
+<body class="pb-32">
 
-    <div id="loading" class="hidden fixed inset-0 bg-white/80 flex flex-col items-center justify-center z-50">
+    <div id="loading" class="hidden fixed inset-0 bg-white/80 flex flex-col items-center justify-center z-[100]">
         <div class="animate-spin rounded-full h-10 w-10 border-t-2 border-blue-600"></div>
+        <p class="text-xs font-bold mt-2 text-blue-600">ĐANG TẢI DỮ LIỆU...</p>
     </div>
 
-    <header class="bg-white border-b border-slate-200 p-4 sticky top-0 z-40 flex justify-between items-center">
-        <span class="sport-font text-2xl text-blue-600 italic font-black tracking-tighter">RANK<span class="text-slate-900">S</span></span>
-        <div class="flex items-center gap-3">
-            <span id="user-name" class="text-xs font-bold text-slate-500 uppercase">CHỦ SÂN</span>
-            <button onclick="firebase.auth().signOut()" class="text-xs text-red-500 font-bold border border-red-200 px-3 py-1.5 rounded-lg">THOÁT</button>
-        </div>
+    <header class="bg-white border-b p-4 sticky top-0 z-40 flex justify-between items-center">
+        <span class="sport-font text-2xl text-blue-600 italic font-black">RANK<span class="text-slate-900">S</span></span>
+        <div id="user-info" class="text-[10px] font-bold text-slate-400 border px-3 py-1 rounded-full bg-slate-50 uppercase">CHỦ SÂN</div>
     </header>
 
-    <main id="main-content" class="p-4 max-w-4xl mx-auto space-y-6"></main>
+    <main id="main-content" class="p-4 max-w-5xl mx-auto space-y-6"></main>
 
-    <nav class="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 flex justify-around p-3 z-50 shadow-lg">
-        <button onclick="renderManagement()" class="flex flex-col items-center gap-1 text-[10px] font-bold text-blue-600">
-            <span class="text-xl">⚙️</span>QUẢN LÝ
-        </button>
-        <button onclick="renderBookingMap()" class="flex flex-col items-center gap-1 text-[10px] font-bold text-slate-400">
-            <span class="text-xl">📅</span>LỊCH ĐẶT
-        </button>
+    <div id="lock-panel" class="hidden fixed bottom-24 left-4 right-4 bg-slate-900 shadow-2xl rounded-2xl p-4 flex justify-between items-center z-[100] border border-white/10 animate-in slide-in-from-bottom duration-300">
+        <div id="selected-info" class="flex flex-col">
+            <span id="txt-duration" class="text-white font-black leading-none">0 GIỜ</span>
+            <span id="txt-money" class="text-blue-400 text-[10px] font-bold">0 VNĐ</span>
+        </div>
+        <div class="flex gap-2">
+            <button onclick="actionLock('locked')" class="bg-amber-400 text-slate-900 px-5 py-2.5 rounded-xl text-[10px] font-black uppercase shadow-lg">KHÓA SÂN</button>
+            <button onclick="actionLock('empty')" class="bg-white/10 text-white px-5 py-2.5 rounded-xl text-[10px] font-black uppercase">MỞ TRỐNG</button>
+        </div>
+    </div>
+
+    <nav class="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-md border-t flex justify-around p-3 z-50 shadow-2xl">
+        <button onclick="renderManagement()" class="flex flex-col items-center gap-1 text-[10px] font-bold text-blue-600"><span>⚙️</span>QUẢN LÝ</button>
+        <button onclick="renderBookingGrid()" class="flex flex-col items-center gap-1 text-[10px] font-bold text-slate-400"><span>📅</span>LỊCH ĐẶT</button>
     </nav>
 
     <script>
-        // Cấu hình Firebase (giữ nguyên thông tin của bạn)
         const firebaseConfig = {
             apiKey: "AIzaSyBpytj0KQybf55iabBzmeg59VL-9oADPHA",
             authDomain: "badrank-89mrd.firebaseapp.com",
@@ -63,196 +67,240 @@
         const db = firebase.firestore();
         const auth = firebase.auth();
 
-        auth.onAuthStateChanged(user => {
+        auth.onAuthStateChanged(user => { 
             if (user) {
-                document.getElementById('user-name').innerText = user.displayName || "CHỦ SÂN";
-                renderManagement();
+                document.getElementById('user-info').innerText = user.displayName;
+                renderManagement(); 
             } else {
-                location.reload();
+                renderLogin();
             }
         });
 
-        // --- 1. GIAO DIỆN QUẢN LÝ (MODULE 5 CẢI TIẾN) ---
+        function showLoading(s) { document.getElementById('loading').classList.toggle('hidden', !s); }
+
+        function renderLogin() {
+            document.getElementById('main-content').innerHTML = `
+                <div class="h-[60vh] flex items-center justify-center">
+                    <button onclick="auth.signInWithPopup(new firebase.auth.GoogleAuthProvider())" class="bg-blue-600 text-white px-8 py-4 rounded-2xl font-black sport-font shadow-xl">ĐĂNG NHẬP CHỦ SÂN</button>
+                </div>`;
+        }
+
+        // --- TAB QUẢN LÝ ---
         async function renderManagement() {
-            const user = auth.currentUser;
-            const doc = await db.collection("courts").doc(user.uid).get();
-            const data = doc.exists ? doc.data() : { ten: "", dc: "", qr: "", ds: [] };
+            showLoading(true);
+            const doc = await db.collection("courts").doc(auth.currentUser.uid).get();
+            const d = doc.exists ? doc.data() : { ten: "", dc: "", qr: "", ds: [], dv: [] };
+            showLoading(false);
 
             document.getElementById("main-content").innerHTML = `
                 <div class="card p-6 space-y-6">
-                    <h2 class="sport-font text-xl text-blue-600">Thiết lập dịch vụ sân</h2>
-                    
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div class="space-y-1">
-                            <label class="text-[10px] font-bold text-slate-400 uppercase">Tên cụm sân</label>
-                            <input id="in-ten" type="text" value="${data.ten}" class="w-full bg-slate-50 border border-slate-200 p-3 rounded-xl text-sm" placeholder="VD: Sân Cầu Phạm Nguyên">
-                        </div>
-                        <div class="space-y-1">
-                            <label class="text-[10px] font-bold text-slate-400 uppercase">Vị trí / Địa chỉ</label>
-                            <input id="in-dc" type="text" value="${data.dc}" class="w-full bg-slate-50 border border-slate-200 p-3 rounded-xl text-sm" placeholder="VD: Số 1 Tôn Thất Thuyết">
+                    <div class="space-y-4">
+                        <h2 class="sport-font text-blue-600 text-lg">Cấu hình cơ sở</h2>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <input id="m-ten" value="${d.ten}" class="p-4 border rounded-2xl text-sm bg-slate-50" placeholder="Tên cụm sân">
+                            <input id="m-dc" value="${d.dc}" class="p-4 border rounded-2xl text-sm bg-slate-50" placeholder="Địa chỉ">
                         </div>
                     </div>
 
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div class="space-y-1">
-                            <label class="text-[10px] font-bold text-slate-400 uppercase">Loại hình kinh doanh</label>
-                            <select id="sel-type" class="w-full bg-slate-50 border border-slate-200 p-3 rounded-xl text-sm">
-                                <option value="Cầu lông">Cầu lông</option>
-                                <option value="Pickleball">Pickleball</option>
-                                <option value="Bóng đá">Bóng đá</option>
-                                <option value="Tennis">Tennis</option>
-                            </select>
-                        </div>
-                        <div class="space-y-1">
-                            <label class="text-[10px] font-bold text-slate-400 uppercase">Số lượng sân</label>
-                            <div class="flex gap-2">
-                                <input id="in-count" type="number" class="w-full bg-slate-50 border border-slate-200 p-3 rounded-xl text-sm" placeholder="VD: 5">
-                                <button onclick="generateCourts()" class="bg-slate-900 text-white px-4 rounded-xl text-xs font-bold">TẠO</button>
-                            </div>
-                        </div>
+                    <div class="bg-blue-50 p-4 rounded-2xl border border-blue-100 flex flex-wrap gap-3">
+                        <select id="m-type" class="flex-1 min-w-[120px] p-3 rounded-xl border text-sm font-bold"><option>Cầu lông</option><option>Pickleball</option><option>Bóng đá</option></select>
+                        <input id="m-count" type="number" class="w-24 p-3 border rounded-xl text-sm" placeholder="SL">
+                        <button onclick="appendCourts()" class="bg-blue-600 text-white px-6 rounded-xl text-xs font-black shadow-lg shadow-blue-200">THÊM SÂN</button>
                     </div>
 
-                    <div class="space-y-1">
-                        <label class="text-[10px] font-bold text-slate-400 uppercase">Link ảnh QR nhận tiền</label>
-                        <input id="in-qr" type="text" value="${data.qr}" class="w-full bg-slate-50 border border-slate-200 p-3 rounded-xl text-sm font-mono" placeholder="Dán link ảnh QR tại đây">
+                    <div>
+                        <label class="text-[10px] font-bold text-slate-400 uppercase">Ảnh QR nhận tiền</label>
+                        <input type="file" id="m-qr-file" onchange="previewQR(this)" class="mt-2 block w-full text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:bg-blue-50 file:text-blue-700">
+                        <img id="m-qr-img" src="${d.qr || ''}" class="w-32 h-32 mt-3 rounded-lg border shadow-sm ${d.qr ? '' : 'hidden'}">
                     </div>
 
-                    <div class="border-t border-slate-100 pt-4">
-                        <h3 class="text-xs font-black mb-3 flex items-center gap-2">📊 BẢNG DỊCH VỤ SÂN</h3>
-                        <div class="overflow-x-auto rounded-xl border border-slate-200">
-                            <table class="w-full text-left text-sm">
-                                <thead class="bg-slate-50 text-slate-500 text-[10px] uppercase font-black">
-                                    <tr>
-                                        <th class="p-3">STT</th>
-                                        <th class="p-3">Tên sân con</th>
-                                        <th class="p-3">Loại hình</th>
-                                        <th class="p-3">Giá (VND/h)</th>
-                                        <th class="p-3"></th>
-                                    </tr>
+                    <div class="space-y-4">
+                        <h3 class="text-xs font-black border-l-4 border-blue-600 pl-2 uppercase">Danh sách dịch vụ sân</h3>
+                        <div class="overflow-x-auto rounded-2xl border border-slate-100 shadow-sm">
+                            <table class="w-full text-sm text-left">
+                                <thead class="bg-slate-50 text-[10px] uppercase font-black text-slate-400">
+                                    <tr><th class="p-4">STT</th><th class="p-4">Tên sân</th><th class="p-4">Loại</th><th class="p-4">Giá/h</th><th class="p-4 text-center">Xóa</th></tr>
                                 </thead>
-                                <tbody id="court-table-body">
-                                    ${data.ds.map((s, i) => createRowHTML(i + 1, s.t, s.l, s.g)).join('')}
+                                <tbody id="court-list">
+                                    ${(d.ds || []).map((s, i) => renderRow(i+1, s.t, s.l, s.g)).join('')}
                                 </tbody>
                             </table>
                         </div>
                     </div>
 
-                    <button onclick="saveManagement()" class="w-full btn-primary py-4 rounded-2xl font-black sport-font tracking-widest text-lg shadow-blue-200 shadow-lg">XÁC NHẬN CẬP NHẬT</button>
+                    <div class="space-y-4">
+                        <div class="flex justify-between items-center"><h3 class="text-xs font-black border-l-4 border-green-500 pl-2 uppercase">Phí dịch vụ khác</h3><button onclick="addDichVu()" class="bg-green-100 text-green-700 px-3 py-1 rounded-lg text-[10px] font-bold">+ THÊM DÒNG</button></div>
+                        <div id="dv-list" class="space-y-2">
+                            ${(d.dv || []).map(dv => renderDvRow(dv.n, dv.p)).join('')}
+                        </div>
+                    </div>
+
+                    <button onclick="saveAll()" class="w-full bg-blue-600 text-white py-5 rounded-2xl font-black shadow-xl shadow-blue-100 hover:scale-[0.98] transition-transform">LƯU TẤT CẢ CẤU HÌNH</button>
                 </div>
             `;
         }
 
-        function createRowHTML(stt, ten, loai, gia) {
-            return `
-                <tr class="border-t border-slate-100 hover:bg-slate-50 transition-colors">
-                    <td class="p-3 font-bold text-slate-400">${stt}</td>
-                    <td class="p-3"><input class="w-full bg-transparent border-none p-1 font-bold c-ten" value="${ten}"></td>
-                    <td class="p-3"><span class="bg-blue-50 text-blue-600 px-2 py-1 rounded text-[10px] font-bold c-loai">${loai}</span></td>
-                    <td class="p-3"><input type="number" class="w-full bg-transparent border-none p-1 font-mono text-blue-600 font-bold c-gia" value="${gia}"></td>
-                    <td class="p-3"><button onclick="this.closest('tr').remove()" class="text-red-400">✕</button></td>
-                </tr>
-            `;
+        function renderRow(stt, t, l, g) {
+            return `<tr class="border-b last:border-0 hover:bg-slate-50 transition-colors">
+                <td class="p-4 text-slate-400 font-bold">${stt}</td>
+                <td><input class="w-full p-2 border-none font-bold text-slate-700 c-t" value="${t}"></td>
+                <td><span class="bg-blue-50 text-blue-600 px-3 py-1 rounded-lg text-[10px] font-black uppercase c-l">${l}</span></td>
+                <td><input class="w-full p-2 border-none font-mono font-bold text-blue-600 c-g" value="${g}"></td>
+                <td class="text-center"><button onclick="this.closest('tr').remove()" class="text-red-300 hover:text-red-500">✕</button></td>
+            </tr>`;
         }
 
-        function generateCourts() {
-            const type = document.getElementById("sel-type").value;
-            const count = parseInt(document.getElementById("in-count").value);
-            const body = document.getElementById("court-table-body");
+        function renderDvRow(n="", p="") {
+            return `<div class="flex gap-2 p-2 bg-slate-50 rounded-xl border border-slate-100">
+                <input class="flex-1 bg-transparent border-none text-xs font-bold dv-n" value="${n}" placeholder="Tên (VD: Nước suối)">
+                <input class="w-24 bg-transparent border-none text-xs font-mono font-bold text-green-600 dv-p" value="${p}" placeholder="Giá">
+                <button onclick="this.parentElement.remove()" class="px-2 text-red-300">✕</button>
+            </div>`;
+        }
+
+        function addDichVu() { document.getElementById("dv-list").insertAdjacentHTML('beforeend', renderDvRow()); }
+
+        function appendCourts() {
+            const count = parseInt(document.getElementById("m-count").value);
+            const type = document.getElementById("m-type").value;
+            const list = document.getElementById("court-list");
             if (!count) return;
-            
-            let html = "";
+            let current = list.querySelectorAll("tr").length;
             for (let i = 1; i <= count; i++) {
-                html += createRowHTML(i, `Sân ${i}`, type, 100000);
+                list.insertAdjacentHTML('beforeend', renderRow(current + i, `Sân ${current + i}`, type, 100000));
             }
-            body.innerHTML = html;
+            document.getElementById("m-count").value = "";
         }
 
-        async function saveManagement() {
-            const rows = document.querySelectorAll("#court-table-body tr");
-            const ds = Array.from(rows).map(row => ({
-                t: row.querySelector(".c-ten").value,
-                l: row.querySelector(".c-loai").innerText,
-                g: row.querySelector(".c-gia").value
-            }));
-
-            const data = {
-                ten: document.getElementById("in-ten").value,
-                dc: document.getElementById("in-dc").value,
-                qr: document.getElementById("in-qr").value,
-                ds: ds
-            };
-
-            await db.collection("courts").doc(auth.currentUser.uid).set(data);
-            alert("Đã cập nhật cấu hình sân thành công!");
+        function previewQR(input) {
+            const file = input.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (e) => { 
+                    const img = document.getElementById('m-qr-img');
+                    img.src = e.target.result;
+                    img.classList.remove('hidden');
+                };
+                reader.readAsDataURL(file);
+            }
         }
 
-        // --- 2. GIAO DIỆN SƠ ĐỒ ĐẶT SÂN (DÀNH CHO VĐV THAM KHẢO) ---
-        async function renderBookingMap() {
-            const user = auth.currentUser;
-            const doc = await db.collection("courts").doc(user.uid).get();
-            if (!doc.exists) return;
+        async function saveAll() {
+            showLoading(true);
+            const ds = []; document.querySelectorAll("#court-list tr").forEach(tr => ds.push({ t: tr.querySelector(".c-t").value, l: tr.querySelector(".c-l").innerText, g: tr.querySelector(".c-g").value }));
+            const dv = []; document.querySelectorAll("#dv-list > div").forEach(div => dv.push({ n: div.querySelector(".dv-n").value, p: div.querySelector(".dv-p").value }));
+            await db.collection("courts").doc(auth.currentUser.uid).set({
+                ten: document.getElementById("m-ten").value,
+                dc: document.getElementById("m-dc").value,
+                qr: document.getElementById("m-qr-img").src,
+                ds: ds, dv: dv
+            });
+            showLoading(false);
+            alert("Lưu thành công!");
+        }
+
+        // --- TAB LỊCH ĐẶT ---
+        async function renderBookingGrid() {
+            showLoading(true);
+            const doc = await db.collection("courts").doc(auth.currentUser.uid).get();
+            if (!doc.exists) { showLoading(false); return; }
             const data = doc.data();
+            const selectedDate = window.currentDate || new Date().toISOString().split('T')[0];
 
             document.getElementById("main-content").innerHTML = `
                 <div class="card p-5 space-y-4">
-                    <div class="flex items-center gap-4">
-                         <div class="w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center text-white text-xl">🏟️</div>
-                         <div>
-                            <h2 class="font-black text-lg">${data.ten}</h2>
-                            <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest">📍 ${data.dc}</p>
-                         </div>
+                    <div class="flex justify-between items-center">
+                        <div class="flex flex-col"><h2 class="sport-font text-blue-600 text-sm">Lịch sân chi tiết</h2><p class="text-[9px] text-slate-400 font-bold">${data.ten}</p></div>
+                        <input type="date" id="date-select" value="${selectedDate}" onchange="changeDate(this.value)" class="bg-slate-50 border p-2 rounded-xl text-xs font-bold text-slate-600">
                     </div>
 
-                    <div class="flex justify-between text-[10px] font-bold uppercase pt-4 border-t border-slate-100">
-                        <div class="flex items-center gap-1"><span class="w-3 h-3 bg-white border border-slate-200 rounded-sm"></span> Trống</div>
-                        <div class="flex items-center gap-1"><span class="w-3 h-3 bg-red-100 border border-red-200 rounded-sm"></span> Đã đặt</div>
-                        <div class="flex items-center gap-1"><span class="w-3 h-3 bg-blue-100 border border-blue-400 rounded-sm"></span> Chọn</div>
+                    <div class="flex gap-2 overflow-x-auto pb-2 no-scrollbar">
+                        ${generateQuickDates(selectedDate)}
                     </div>
 
-                    <div class="overflow-x-auto">
-                        <div class="min-w-[500px] border border-slate-200 rounded-xl overflow-hidden">
-                            <div class="grid grid-cols-10 bg-slate-50 border-b border-slate-200 text-[9px] font-black uppercase text-slate-400">
-                                <div class="p-3 border-r border-slate-200">Giờ / Sân</div>
-                                ${data.ds.map(s => `<div class="p-3 text-center border-r border-slate-200">${s.t}</div>`).join('')}
-                            </div>
-                            
-                            <div id="grid-body">
-                                ${generateTimeSlots(data.ds)}
-                            </div>
+                    <div class="overflow-x-auto rounded-2xl border border-slate-200">
+                        <div class="grid-container" style="--num-courts: ${data.ds.length}">
+                            <div class="grid-cell header-cell">GIỜ</div>
+                            ${data.ds.map(s => `<div class="grid-cell header-cell flex flex-col"><span>${s.t}</span><span class="text-[8px] opacity-60 font-mono">${(s.g/1000)}k/h</span></div>`).join('')}
+                            ${generateGridRows(data.ds)}
                         </div>
-                    </div>
-
-                    <div class="bg-slate-900 rounded-2xl p-4 flex justify-between items-center text-white">
-                        <div>
-                            <p class="text-[9px] text-slate-400 font-bold">TỔNG CỘNG</p>
-                            <p class="text-xl font-black text-blue-400">0 VND</p>
-                        </div>
-                        <button class="bg-blue-600 px-6 py-3 rounded-xl font-black text-xs">ĐẶT LỊCH NGAY</button>
                     </div>
                 </div>
             `;
+            await loadBookingStatus(selectedDate);
+            showLoading(false);
         }
 
-        function generateTimeSlots(courts) {
-            let html = "";
-            const times = ["5:00", "6:00", "7:00", "8:00", "9:00", "10:00", "17:00", "18:00", "19:00", "20:00"];
-            
-            times.forEach(t => {
-                html += `<div class="grid grid-cols-10 border-b border-slate-100 items-center">
-                    <div class="p-3 text-[10px] font-bold text-slate-500 border-r border-slate-100 bg-slate-50/50">${t}</div>
-                    ${courts.map((s, idx) => `
-                        <div onclick="toggleSlot(this, ${s.g})" class="p-3 h-12 border-r border-slate-100 text-center transition-all flex items-center justify-center cursor-pointer group">
-                             <div class="w-full h-full rounded-lg border border-transparent group-hover:border-blue-200 transition-all"></div>
-                        </div>
-                    `).join('')}
-                </div>`;
+        function generateQuickDates(selected) {
+            let h = "";
+            for (let i = 0; i < 7; i++) {
+                let d = new Date(); d.setDate(d.getDate() + i);
+                let iso = d.toISOString().split('T')[0];
+                let active = iso === selected;
+                h += `<button onclick="changeDate('${iso}')" class="flex-shrink-0 w-12 h-14 flex flex-col items-center justify-center rounded-2xl border transition-all ${active ? 'bg-blue-600 text-white border-blue-600 shadow-lg' : 'bg-white text-slate-400 border-slate-100'}">
+                    <span class="text-[8px] font-bold uppercase">${['CN','T2','T3','T4','T5','T6','T7'][d.getDay()]}</span>
+                    <span class="text-sm font-black">${d.getDate()}</span>
+                </button>`;
+            }
+            return h;
+        }
+
+        function generateGridRows(courts) {
+            let h = "";
+            for (let i = 5; i <= 22; i++) {
+                [":00", ":30"].forEach(m => {
+                    let t = i.toString().padStart(2, '0') + m;
+                    h += `<div class="grid-cell cell-time">${t}</div>`;
+                    courts.forEach((s, idx) => {
+                        h += `<div onclick="toggleCell(this)" class="grid-cell status-empty" data-slot="slot_${t.replace(':','')}_${idx}" data-price="${s.g/2}" data-time="${t}" data-idx="${idx}">
+                            <span class="text-[8px] opacity-20 font-bold uppercase">Trống</span>
+                        </div>`;
+                    });
+                });
+            }
+            return h;
+        }
+
+        function toggleCell(el) {
+            el.classList.toggle("is-selecting");
+            const sel = document.querySelectorAll(".is-selecting");
+            const panel = document.getElementById("lock-panel");
+            if (sel.length > 0) {
+                panel.classList.remove("hidden");
+                let m = 0; sel.forEach(c => m += parseFloat(c.dataset.price));
+                document.getElementById("txt-duration").innerText = (sel.length * 0.5) + " GIỜ";
+                document.getElementById("txt-money").innerText = m.toLocaleString() + " VNĐ";
+            } else { panel.classList.add("hidden"); }
+        }
+
+        async function changeDate(d) { window.currentDate = d; await renderBookingGrid(); }
+
+        async function loadBookingStatus(date) {
+            const snap = await db.collection("bookings").doc(`${auth.currentUser.uid}_${date}`).get();
+            if (!snap.exists) return;
+            const data = snap.data();
+            Object.keys(data).forEach(key => {
+                const cell = document.querySelector(`[data-slot="${key}"]`);
+                if (cell) {
+                    const s = data[key].s;
+                    if (s === 'locked') { cell.className = "grid-cell status-manual-locked"; cell.innerHTML = "<span>KHÁCH NGOÀI</span>"; }
+                    else if (s === 'booked') { cell.className = "grid-cell status-booked"; cell.innerHTML = "<span>ĐÃ ĐẶT</span>"; }
+                }
             });
-            return html;
         }
 
-        function toggleSlot(el, price) {
-            el.classList.toggle("status-selecting");
-            // Tính toán tiền ở đây
+        async function actionLock(type) {
+            showLoading(true);
+            const sel = document.querySelectorAll(".is-selecting");
+            const date = window.currentDate || new Date().toISOString().split('T')[0];
+            const updates = {};
+            sel.forEach(el => {
+                updates[el.dataset.slot] = { s: type, p: type === 'locked' ? el.dataset.price : 0 };
+            });
+            await db.collection("bookings").doc(`${auth.currentUser.uid}_${date}`).set(updates, { merge: true });
+            document.getElementById("lock-panel").classList.add("hidden");
+            await renderBookingGrid();
+            showLoading(false);
         }
     </script>
 </body>
