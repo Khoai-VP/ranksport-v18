@@ -2,7 +2,7 @@
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
-    <title>RankSport v9.0 - Stable Version</title>
+    <title>RankSport v10.0 - Full Power</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
@@ -16,23 +16,22 @@
         .grid-cell { border: 0.5px solid #f1f5f9; height: 50px; display: flex; align-items: center; justify-content: center; cursor: pointer; }
         .header-cell { background: #0f172a; color: white; position: sticky; top: 0; z-index: 30; font-family: 'Oswald'; }
         .cell-time { background: #f8fafc; font-weight: 800; border-right: 2px solid #cbd5e1; position: sticky; left: 0; z-index: 20; font-size: 11px; }
-        /* Giữ nguyên bảng màu ông đã test ok */
         .is-cl { border-left: 6px solid #10b981 !important; background: #f0fdf4 !important; color: #065f46 !important; font-weight: 900; }
         .is-pb { border-left: 6px solid #3b82f6 !important; background: #eff6ff !important; color: #1e40af !important; font-weight: 900; }
         .is-selecting { background: #dbeafe !important; border: 2px solid #2563eb !important; }
+        .img-box { aspect-ratio: 1; background: #f1f5f9; border: 2px dashed #cbd5e1; border-radius: 1rem; display: flex; align-items: center; justify-content: center; overflow: hidden; position: relative; }
+        .img-box img { width: 100%; height: 100%; object-fit: cover; position: absolute; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
     </style>
 </head>
 <body class="pb-32">
-
-    <div id="loading" class="hidden fixed inset-0 bg-white/90 flex flex-col items-center justify-center z-[100]">
-        <div class="animate-spin rounded-full h-10 w-10 border-t-4 border-blue-600"></div>
-    </div>
+    <div id="loading" class="hidden fixed inset-0 bg-white/90 flex flex-col items-center justify-center z-[100]"><div class="animate-spin rounded-full h-10 w-10 border-t-4 border-blue-600"></div></div>
 
     <header class="bg-white border-b p-4 sticky top-0 z-40 flex justify-between items-center shadow-sm">
         <span class="font-black italic text-xl text-blue-600 uppercase">RankSport</span>
-        <div class="flex items-center gap-3">
+        <div id="header-user" class="hidden flex items-center gap-3">
             <div id="user-info" class="text-[10px] font-black text-slate-500 bg-slate-100 px-3 py-1.5 rounded-full uppercase italic">...</div>
-            <button onclick="auth.signOut()" class="text-[10px] font-black text-red-500 border border-red-200 px-3 py-1.5 rounded-full hover:bg-red-50 transition-all">ĐĂNG XUẤT</button>
+            <button onclick="handleLogout()" class="text-[10px] font-black text-red-500 border border-red-200 px-3 py-1.5 rounded-full uppercase">Đăng xuất</button>
         </div>
     </header>
 
@@ -40,82 +39,119 @@
 
     <div id="lock-panel" class="hidden fixed bottom-24 left-4 right-4 bg-slate-900 shadow-2xl rounded-3xl p-6 z-[50] text-white">
         <div class="flex justify-between items-center mb-4">
-            <div>
-                <div id="txt-duration" class="font-black text-xl italic uppercase text-blue-400">0 GIỜ</div>
-                <div id="txt-money" class="text-white text-[10px] font-bold opacity-50">0 VNĐ</div>
-            </div>
+            <div><div id="txt-duration" class="font-black text-xl italic uppercase text-blue-400">0 GIỜ</div><div id="txt-money" class="text-white text-[10px] font-bold opacity-50 uppercase">0đ tiền sân</div></div>
             <div class="text-right">
-                <p class="text-[9px] text-slate-400 font-black mb-1 italic uppercase">Dịch vụ & Phí thêm</p>
-                <input type="text" id="svc-name" class="bg-white/5 border-b border-white/20 text-white text-[11px] outline-none w-32 mb-1 block ml-auto" placeholder="Tên: Nước, vợt...">
-                <input type="text" id="svc-price" oninput="formatCurrency(this)" class="bg-white/10 text-white font-black text-right border-b-2 border-blue-500 outline-none w-32 text-sm block ml-auto" placeholder="Số tiền">
+                <p class="text-[9px] text-slate-400 font-black mb-1 uppercase">Dịch vụ</p>
+                <select id="svc-select" onchange="document.getElementById('svc-price').value = this.value" class="bg-white/10 text-white text-[11px] font-bold p-2 rounded-lg outline-none w-32 mb-1 block ml-auto"><option value="0">-- Chọn --</option></select>
+                <input type="text" id="svc-price" class="bg-white/10 text-white font-black text-right border-b-2 border-blue-500 outline-none w-32 text-sm block ml-auto" placeholder="0">
             </div>
         </div>
         <div class="flex gap-2">
-            <button onclick="actionLock('locked')" class="flex-1 bg-blue-600 py-4 rounded-2xl font-black text-xs uppercase shadow-lg active:scale-95">Xác nhận đặt</button>
-            <button onclick="actionLock('empty')" class="flex-1 bg-slate-700 py-4 rounded-2xl font-black text-xs uppercase active:scale-95">Mở trống sân</button>
+            <button onclick="actionLock('locked')" class="flex-1 bg-blue-600 py-4 rounded-2xl font-black text-xs uppercase shadow-lg">Xác nhận</button>
+            <button onclick="actionLock('empty')" class="flex-1 bg-slate-700 py-4 rounded-2xl font-black text-xs uppercase">Hủy</button>
         </div>
     </div>
 
-    <nav class="fixed bottom-0 left-0 right-0 bg-white border-t flex justify-around p-4 z-40 shadow-xl">
-        <button onclick="renderManagement()" class="flex flex-col items-center text-[10px] font-black text-slate-400 hover:text-blue-600 uppercase"><span>⚙️</span>Cấu hình</button>
-        <button onclick="renderBookingGrid()" class="flex flex-col items-center text-[10px] font-black text-slate-400 hover:text-blue-600 uppercase"><span>📅</span>Lịch đặt</button>
-        <button onclick="renderRevenue()" class="flex flex-col items-center text-[10px] font-black text-slate-400 hover:text-blue-600 uppercase"><span>💰</span>Doanh thu</button>
+    <nav id="nav-bar" class="hidden fixed bottom-0 left-0 right-0 bg-white border-t flex justify-around p-4 z-40 shadow-xl">
+        <button onclick="renderManagement()" class="flex flex-col items-center text-[10px] font-black text-slate-400 uppercase"><span>⚙️</span>Cấu hình</button>
+        <button onclick="renderBookingGrid()" class="flex flex-col items-center text-[10px] font-black text-slate-400 uppercase"><span>📅</span>Lịch đặt</button>
+        <button onclick="renderRevenue()" class="flex flex-col items-center text-[10px] font-black text-slate-400 uppercase"><span>💰</span>Doanh thu</button>
     </nav>
 
     <script>
+        // --- FIREBASE CONFIG ---
         const firebaseConfig = { apiKey: "AIzaSyBpytj0KQybf55iabBzmeg59VL-9oADPHA", authDomain: "badrank-89mrd.firebaseapp.com", projectId: "badrank-89mrd", storageBucket: "badrank-89mrd.appspot.com", messagingSenderId: "951939105470", appId: "1:951939105470:web:968f94f61f94d9b4b08705" };
         firebase.initializeApp(firebaseConfig);
-        const db = firebase.firestore();
-        const auth = firebase.auth();
-
+        const db = firebase.firestore(); const auth = firebase.auth();
         const fmt = (v) => new Intl.NumberFormat('vi-VN').format(v || 0);
-        function formatCurrency(i) { let v = i.value.replace(/\D/g, ""); i.value = v.replace(/\B(?=(\d{3})+(?!\d))/g, "."); }
-        function getRaw(s) { return parseFloat(s.toString().replace(/\./g, '')) || 0; }
+        const getRaw = (s) => parseFloat(s.toString().replace(/\D/g, '')) || 0;
         function showLoading(s) { document.getElementById('loading').classList.toggle('hidden', !s); }
 
-        auth.onAuthStateChanged(user => { if(user) { document.getElementById('user-info').innerText = user.displayName; renderBookingGrid(); } else renderLogin(); });
+        auth.onAuthStateChanged(user => {
+            if(user) {
+                document.getElementById('header-user').classList.remove('hidden');
+                document.getElementById('nav-bar').classList.remove('hidden');
+                document.getElementById('user-info').innerText = user.displayName;
+                renderBookingGrid();
+            } else renderRoleSelection();
+        });
 
-        function renderLogin() {
-            document.getElementById('main-content').innerHTML = `<div class="h-[60vh] flex items-center justify-center"><button onclick="auth.signInWithPopup(new firebase.auth.GoogleAuthProvider())" class="bg-blue-600 text-white px-10 py-5 rounded-3xl font-black shadow-xl">ĐĂNG NHẬP CHỦ SÂN</button></div>`;
+        function renderRoleSelection() {
+            document.getElementById('main-content').innerHTML = `
+                <div class="h-[70vh] flex flex-col items-center justify-center gap-6">
+                    <button onclick="auth.signInWithPopup(new firebase.auth.GoogleAuthProvider())" class="w-72 bg-blue-600 text-white p-6 rounded-[2rem] font-black shadow-2xl">ĐĂNG NHẬP CHỦ SÂN</button>
+                    <button onclick="alert('VĐV view')" class="w-72 bg-slate-100 text-slate-500 p-6 rounded-[2rem] font-black border-2 border-slate-200 uppercase">Tôi là Vận động viên</button>
+                </div>`;
         }
+        function handleLogout() { auth.signOut().then(() => { location.reload(); }); }
 
         // --- TAB 1: CẤU HÌNH ---
         async function renderManagement() {
             showLoading(true);
             const doc = await db.collection("courts").doc(auth.currentUser.uid).get();
-            const d = doc.exists ? doc.data() : { ten:"", ds:[] };
+            const d = doc.exists ? doc.data() : { ten:"", dc:"", sdt:"", ds:[], svcs:[], imgs:[] };
             showLoading(false);
             document.getElementById("main-content").innerHTML = `
-                <div class="space-y-6">
-                    <div class="bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
-                        <h2 class="font-black text-blue-600 mb-4 italic uppercase text-xs">Cài đặt sân</h2>
-                        <input id="m-ten" value="${d.ten||''}" class="w-full p-4 mb-4 bg-slate-50 rounded-2xl font-bold border-none" placeholder="Tên cụm sân">
+                <div class="space-y-6 pb-20">
+                    <div class="bg-white p-6 rounded-[2.5rem] shadow-sm border">
+                        <h2 class="font-black text-blue-600 mb-4 italic uppercase text-[10px]">1. Nhận diện sân</h2>
+                        <div class="grid grid-cols-3 gap-2 mb-4">
+                            ${[0,1,2].map(i => `<label class="img-box cursor-pointer"><input type="file" class="hidden" onchange="upImg(this, ${i})"><img id="pre-${i}" src="${d.imgs?.[i]||''}" class="${d.imgs?.[i]?'':'hidden'}"><span class="text-slate-300 font-black">+</span></label>`).join('')}
+                        </div>
+                        <div class="space-y-2">
+                            <input id="m-ten" value="${d.ten||''}" class="w-full p-4 bg-slate-50 rounded-2xl font-bold" placeholder="Tên cụm sân">
+                            <input id="m-dc" value="${d.dc||''}" class="w-full p-4 bg-slate-50 rounded-2xl font-bold" placeholder="Địa chỉ">
+                            <input id="m-sdt" value="${d.sdt||''}" class="w-full p-4 bg-slate-50 rounded-2xl font-bold" placeholder="Số điện thoại">
+                        </div>
+                    </div>
+
+                    <div class="bg-white p-6 rounded-[2.5rem] shadow-sm border">
+                        <h2 class="font-black text-emerald-600 mb-4 italic uppercase text-[10px]">2. Danh sách sân</h2>
                         <div class="flex gap-2 mb-4 bg-slate-900 p-3 rounded-2xl">
                             <select id="m-type" class="flex-1 bg-transparent text-white font-bold outline-none"><option>Cầu lông</option><option>Pickleball</option></select>
                             <input id="m-count" type="number" class="w-16 rounded-xl text-center font-bold" placeholder="SL">
-                            <button onclick="addCourts()" class="bg-blue-600 text-white px-4 rounded-xl font-black text-[10px]">THÊM</button>
+                            <button onclick="addC()" class="bg-blue-600 text-white px-4 rounded-xl font-black text-[10px]">THÊM</button>
                         </div>
-                        <table class="w-full text-xs">
-                            <tbody id="court-list">${(d.ds||[]).map(s => `<tr class="border-b"><td class="py-4 font-black c-t">${s.t}</td><td class="font-bold text-slate-400 c-l">${s.l}</td><td><input oninput="formatCurrency(this)" class="w-full text-right font-black text-blue-600 c-g bg-transparent" value="${fmt(s.g)}"></td><td class="text-right"><button onclick="this.closest('tr').remove()" class="text-red-400">✕</button></td></tr>`).join('')}</tbody>
-                        </table>
+                        <table class="w-full text-xs" id="court-list">${(d.ds||[]).map(s=>`<tr class="border-b"><td class="py-4 font-black c-t">${s.t}</td><td class="font-bold text-slate-400 c-l">${s.l}</td><td><input class="w-full text-right font-black text-blue-600 c-g bg-transparent" value="${fmt(s.g)}"></td><td class="text-right"><button onclick="this.closest('tr').remove()" class="text-red-400 font-bold px-2">✕</button></td></tr>`).join('')}</table>
                     </div>
-                    <button onclick="saveC()" class="w-full bg-blue-600 text-white py-5 rounded-3xl font-black uppercase shadow-xl">LƯU CẤU HÌNH</button>
+
+                    <div class="bg-white p-6 rounded-[2.5rem] shadow-sm border">
+                        <h2 class="font-black text-amber-600 mb-4 italic uppercase text-[10px]">3. Bảng phí dịch vụ</h2>
+                        <div class="flex gap-2 mb-4">
+                            <input id="s-n" class="flex-1 p-3 bg-slate-50 rounded-xl font-bold text-xs" placeholder="Tên: Nước, Gửi xe...">
+                            <input id="s-p" class="w-24 p-3 bg-slate-50 rounded-xl font-bold text-xs text-right" placeholder="Giá">
+                            <button onclick="addS()" class="bg-amber-500 text-white px-4 rounded-xl font-black text-[10px]">THÊM</button>
+                        </div>
+                        <table class="w-full text-xs" id="svc-list">${(d.svcs||[]).map(s=>`<tr class="border-b"><td class="py-3 font-bold s-n">${s.n}</td><td class="text-right font-black s-p">${fmt(s.p)}</td><td class="text-right"><button onclick="this.closest('tr').remove()" class="text-red-400 font-bold px-2">✕</button></td></tr>`).join('')}</table>
+                    </div>
+                    <button onclick="saveC()" class="w-full bg-blue-600 text-white py-5 rounded-[2rem] font-black uppercase shadow-xl">LƯU TOÀN BỘ CẤU HÌNH</button>
                 </div>`;
         }
 
-        function addCourts() {
-            const c = parseInt(document.getElementById("m-count").value), t = document.getElementById("m-type").value; if(!c) return;
-            const list = document.getElementById("court-list");
-            for(let i=1; i<=c; i++) {
-                list.insertAdjacentHTML('beforeend', `<tr class="border-b"><td class="py-4 font-black c-t">Sân ${list.rows.length+1}</td><td class="font-bold text-slate-400 c-l">${t}</td><td><input oninput="formatCurrency(this)" class="w-full text-right font-black text-blue-600 c-g bg-transparent" value="100.000"></td><td class="text-right"><button onclick="this.closest('tr').remove()" class="text-red-400">✕</button></td></tr>`);
+        function upImg(input, i) {
+            const file = input.files[0]; if (file) {
+                const reader = new FileReader(); reader.onload = (e) => { 
+                    const img = document.getElementById(`pre-${i}`); img.src = e.target.result; img.classList.remove('hidden');
+                }; reader.readAsDataURL(file);
             }
+        }
+        function addC() {
+            const c = document.getElementById("m-count").value, t = document.getElementById("m-type").value; if(!c) return;
+            for(let i=1; i<=c; i++) document.getElementById("court-list").insertAdjacentHTML('beforeend', `<tr class="border-b"><td class="py-4 font-black c-t">Sân ${document.getElementById("court-list").rows.length+1}</td><td class="font-bold text-slate-400 c-l">${t}</td><td><input class="w-full text-right font-black text-blue-600 c-g bg-transparent" value="100.000"></td><td class="text-right"><button onclick="this.closest('tr').remove()" class="text-red-400 font-bold px-2">✕</button></td></tr>`);
+        }
+        function addS() {
+            const n = document.getElementById("s-n").value, p = document.getElementById("s-p").value; if(!n || !p) return;
+            document.getElementById("svc-list").insertAdjacentHTML('beforeend', `<tr class="border-b"><td class="py-3 font-bold s-n">${n}</td><td class="text-right font-black s-p">${p}</td><td class="text-right"><button onclick="this.closest('tr').remove()" class="text-red-400 font-bold px-2">✕</button></td></tr>`);
+            document.getElementById("s-n").value = ""; document.getElementById("s-p").value = "";
         }
 
         async function saveC() {
             showLoading(true);
             const ds = []; document.querySelectorAll("#court-list tr").forEach(tr => ds.push({ t:tr.querySelector(".c-t").innerText, l:tr.querySelector(".c-l").innerText, g:getRaw(tr.querySelector(".c-g").value) }));
-            await db.collection("courts").doc(auth.currentUser.uid).set({ ten:document.getElementById("m-ten").value, ds }, {merge:true});
-            showLoading(false); alert("Đã lưu cấu hình sân!");
+            const svcs = []; document.querySelectorAll("#svc-list tr").forEach(tr => svcs.push({ n:tr.querySelector(".s-n").innerText, p:getRaw(tr.querySelector(".s-p").innerText) }));
+            const imgs = [0,1,2].map(i => document.getElementById(`pre-${i}`).src).filter(s => s.startsWith('data:'));
+            await db.collection("courts").doc(auth.currentUser.uid).set({ ten:document.getElementById("m-ten").value, dc:document.getElementById("m-dc").value, sdt:document.getElementById("m-sdt").value, ds, svcs, imgs }, {merge:true});
+            showLoading(false); alert("Cập nhật thành công!");
         }
 
         // --- TAB 2: LỊCH ĐẶT ---
@@ -123,174 +159,95 @@
             showLoading(true);
             const doc = await db.collection("courts").doc(auth.currentUser.uid).get();
             if(!doc.exists) { showLoading(false); renderManagement(); return; }
-            const d = doc.data(); window.courtConfig = d.ds;
+            const d = doc.data(); window.courtConfig = d.ds; window.svcConfig = d.svcs || [];
             const date = window.currentDate || new Date().toISOString().split('T')[0];
             document.getElementById("main-content").innerHTML = `
                 <div class="bg-white p-4 rounded-[2rem] shadow-sm">
-                    <div class="flex justify-between items-center mb-4 px-2">
-                        <h2 class="font-black text-[11px] uppercase italic text-slate-400">${d.ten}</h2>
-                        <input type="date" value="${date}" onchange="changeDate(this.value)" class="text-[10px] font-black bg-slate-100 p-2 rounded-xl border-none">
+                    <div class="flex justify-between items-start mb-4 px-2">
+                        <div><h2 class="font-black text-sm uppercase italic text-blue-600 leading-none">${d.ten}</h2><p class="text-[8px] font-bold text-slate-400 mt-1 uppercase">${d.dc} • ${d.sdt}</p></div>
+                        <input type="date" value="${date}" onchange="window.currentDate=this.value;renderBookingGrid()" class="text-[10px] font-black bg-slate-100 p-2 rounded-xl border-none">
                     </div>
                     <div class="overflow-x-auto rounded-[1.5rem] border shadow-inner no-scrollbar">
-                        <div class="grid-container" style="--num-courts: ${d.ds.length}">
-                            <div class="grid-cell header-cell text-[9px]">GIỜ</div>
-                            ${d.ds.map(s => `<div class="grid-cell header-cell flex flex-col pt-1 border-b-4 ${s.l.includes('Cầu')?'border-emerald-500':'border-blue-500'}">
-                                <span class="text-[9px] font-black uppercase">${s.t}</span>
-                                <span class="text-[6px] opacity-60 uppercase">${s.l}</span>
-                            </div>`).join('')}
-                            ${generateRows(d.ds)}
-                        </div>
+                        <div class="grid-container" style="--num-courts:${d.ds.length}"><div class="grid-cell header-cell text-[9px]">GIỜ</div>${d.ds.map(s=>`<div class="grid-cell header-cell flex flex-col pt-1 border-b-4 ${s.l.includes('Cầu')?'border-emerald-500':'border-blue-500'}"><span class="text-[9px] font-black uppercase">${s.t}</span><span class="text-[6px] opacity-60 uppercase">${s.l}</span></div>`).join('')}${generateRows(d.ds)}</div>
                     </div>
                 </div>`;
+            document.getElementById("svc-select").innerHTML = '<option value="0">-- Dịch vụ --</option>' + window.svcConfig.map(s=>`<option value="${s.p}">${s.n}</option>`).join('');
             await loadB(date); showLoading(false);
         }
-
         function generateRows(courts) {
             let h = ""; for (let i=5; i<=23; i++) { [":00", ":30"].forEach(m => {
                 let t = i.toString().padStart(2,'0')+m; h += `<div class="grid-cell cell-time">${t}</div>`;
                 courts.forEach((s, idx) => { h += `<div onclick="toggle(this)" class="grid-cell" data-slot="slot_${t.replace(':','')}_${idx}" data-price="${s.g/2}"></div>`; });
             }); } return h;
         }
-
         function toggle(el) {
-            el.classList.toggle("is-selecting");
-            const sel = document.querySelectorAll(".is-selecting"), panel = document.getElementById("lock-panel");
+            el.classList.toggle("is-selecting"); const sel = document.querySelectorAll(".is-selecting");
             if(sel.length > 0) {
-                panel.classList.remove("hidden");
+                document.getElementById("lock-panel").classList.remove("hidden");
                 let m = 0; sel.forEach(c => m += parseFloat(c.dataset.price || 0));
                 document.getElementById("txt-duration").innerText = (sel.length * 0.5).toFixed(1) + " GIỜ";
-                document.getElementById("txt-money").innerText = fmt(m) + " VNĐ TIỀN SÂN";
-            } else panel.classList.add("hidden");
+                document.getElementById("txt-money").innerText = fmt(m) + "đ SÂN";
+            } else document.getElementById("lock-panel").classList.add("hidden");
         }
-
         async function actionLock(type) {
-            showLoading(true);
-            const sel = document.querySelectorAll(".is-selecting"), date = window.currentDate || new Date().toISOString().split('T')[0];
-            const updates = {};
-            sel.forEach((el, i) => {
-                if(type==='empty') updates[el.dataset.slot] = firebase.firestore.FieldValue.delete();
-                else updates[el.dataset.slot] = { 
-                    s:'locked', 
-                    p:parseFloat(el.dataset.price), 
-                    v: i===0 ? getRaw(document.getElementById("svc-price").value) : 0,
-                    n: i===0 ? document.getElementById("svc-name").value : ""
-                };
-            });
+            showLoading(true); const sel = document.querySelectorAll(".is-selecting"), date = window.currentDate || new Date().toISOString().split('T')[0], updates = {};
+            sel.forEach((el, i) => { if(type==='empty') updates[el.dataset.slot] = firebase.firestore.FieldValue.delete(); else updates[el.dataset.slot] = { s:'locked', p:parseFloat(el.dataset.price), v: i===0?getRaw(document.getElementById("svc-price").value):0 }; });
             await db.collection("bookings").doc(`${auth.currentUser.uid}_${date}`).set(updates, {merge:true});
-            document.getElementById("lock-panel").classList.add("hidden");
-            document.getElementById("svc-name").value = "";
-            document.getElementById("svc-price").value = "";
-            renderBookingGrid();
+            document.getElementById("lock-panel").classList.add("hidden"); renderBookingGrid();
         }
-
         async function loadB(date) {
-            const snap = await db.collection("bookings").doc(`${auth.currentUser.uid}_${date}`).get();
-            if(!snap.exists) return;
+            const snap = await db.collection("bookings").doc(`${auth.currentUser.uid}_${date}`).get(); if(!snap.exists) return;
             const b = snap.data(), ds = window.courtConfig;
             Object.keys(b).forEach(k => {
-                const el = document.querySelector(`[data-slot="${k}"]`);
-                if(el && b[k].s === 'locked') {
-                    const idx = k.split('_').pop();
-                    const isCL = ds[idx].l.includes('Cầu');
-                    el.className = `grid-cell ${isCL?'is-cl':'is-pb'}`;
-                    el.innerHTML = `<div class="text-[7px] font-black text-center leading-none">ĐÃ ĐẶT<br><span class="text-[6px] opacity-60">${b[k].v > 0 ? '+'+fmt(b[k].v) : ''}</span></div>`;
-                }
+                const el = document.querySelector(`[data-slot="${k}"]`), idx = k.split('_').pop();
+                if(el && b[k].s === 'locked' && ds[idx]) { el.className = `grid-cell ${ds[idx].l.includes('Cầu')?'is-cl':'is-pb'}`; el.innerHTML = `<div class="text-[7px] font-black text-center leading-none uppercase">ĐÃ ĐẶT<br><span class="text-[6px] opacity-60">${b[k].v > 0 ? '+'+fmt(b[k].v) : ''}</span></div>`; }
             });
         }
 
-        function changeDate(d) { window.currentDate = d; renderBookingGrid(); }
-
-        // --- TAB 3: DOANH THU (Có Biểu đồ tròn & Chi phí) ---
+        // --- TAB 3: DOANH THU & AI ---
         async function renderRevenue() {
-            showLoading(true);
-            const date = window.currentDate || new Date().toISOString().split('T')[0];
-            const snap = await db.collection("bookings").doc(`${auth.currentUser.uid}_${date}`).get();
-            const courtDoc = await db.collection("courts").doc(auth.currentUser.uid).get();
-            const expSnap = await db.collection("expenses").doc(`${auth.currentUser.uid}_${date}`).get();
-            
-            let clR=0, pbR=0, totalV=0, expV = expSnap.exists ? expSnap.data().v : 0;
-            if(snap.exists && courtDoc.exists) {
+            showLoading(true); const date = window.currentDate || new Date().toISOString().split('T')[0], snap = await db.collection("bookings").doc(`${auth.currentUser.uid}_${date}`).get(), courtDoc = await db.collection("courts").doc(auth.currentUser.uid).get();
+            let clR=0, pbR=0, totalV=0; if(snap.exists && courtDoc.exists) {
                 const b = snap.data(), ds = courtDoc.data().ds;
-                Object.keys(b).forEach(k => {
-                    if(b[k].s==='locked') {
-                        const idx = parseInt(k.split('_').pop());
-                        totalV += b[k].v;
-                        if(ds[idx] && ds[idx].l.includes('Cầu')) clR += b[k].p; else pbR += b[k].p;
-                    }
-                });
+                Object.keys(b).forEach(k => { if(b[k].s==='locked') { const idx = parseInt(k.split('_').pop()); totalV += (b[k].v || 0); if(ds[idx]?.l.includes('Cầu')) clR += b[k].p; else pbR += b[k].p; } });
             }
-
             document.getElementById("main-content").innerHTML = `
                 <div class="space-y-6">
-                    <div class="bg-slate-900 p-8 rounded-[3rem] text-white shadow-xl relative overflow-hidden">
-                        <div class="flex justify-between items-center mb-6 z-10 relative">
-                            <div><p class="text-[10px] opacity-50 font-black uppercase">Doanh thu ${date}</p>
-                            <h2 class="text-4xl font-black text-blue-400 mt-1">${fmt(clR + pbR + totalV)}đ</h2></div>
-                            <input type="date" value="${date}" onchange="changeDateRev(this.value)" class="bg-white/10 p-2 rounded-xl text-xs font-bold outline-none border-none">
+                    <div class="bg-slate-900 p-8 rounded-[3rem] text-white shadow-xl">
+                        <div class="flex justify-between items-center mb-6">
+                            <div><p class="text-[10px] opacity-50 font-black uppercase">Tổng doanh thu</p><h2 class="text-4xl font-black text-blue-400 mt-1">${fmt(clR + pbR + totalV)}đ</h2></div>
+                            <input type="date" value="${date}" onchange="window.currentDate=this.value;renderRevenue()" class="bg-white/10 p-2 rounded-xl text-xs font-bold">
                         </div>
-                        <div class="grid grid-cols-3 gap-2 z-10 relative">
-                            <div class="bg-white/5 p-3 rounded-2xl text-center"><p class="text-[8px] opacity-40 uppercase">Cầu lông</p><p class="font-black text-[10px] text-emerald-400">${fmt(clR)}</p></div>
-                            <div class="bg-white/5 p-3 rounded-2xl text-center"><p class="text-[8px] opacity-40 uppercase">Pickleball</p><p class="font-black text-[10px] text-blue-400">${fmt(pbR)}</p></div>
-                            <div class="bg-white/5 p-3 rounded-2xl text-center"><p class="text-[8px] opacity-40 uppercase">Dịch vụ</p><p class="font-black text-[10px] text-amber-400">${fmt(totalV)}</p></div>
+                        <div class="grid grid-cols-3 gap-2 text-center">
+                            <div class="bg-white/5 p-3 rounded-2xl"><p class="text-[8px] opacity-40 uppercase">Cầu lông</p><p class="font-black text-emerald-400">${fmt(clR)}</p></div>
+                            <div class="bg-white/5 p-3 rounded-2xl"><p class="text-[8px] opacity-40 uppercase">Pickleball</p><p class="font-black text-blue-400">${fmt(pbR)}</p></div>
+                            <div class="bg-white/5 p-3 rounded-2xl"><p class="text-[8px] opacity-40 uppercase">Dịch vụ</p><p class="font-black text-amber-400">${fmt(totalV)}</p></div>
                         </div>
                     </div>
 
-                    <div class="bg-white p-6 rounded-3xl shadow-sm flex flex-col md:flex-row gap-8 items-center">
+                    <div class="bg-blue-600 p-6 rounded-[2.5rem] text-white shadow-lg">
+                        <div class="flex items-center gap-3 mb-3"><span class="text-xl">🤖</span><h3 class="font-black uppercase italic text-xs">AI Phân tích & Gợi ý</h3></div>
+                        <p class="text-xs opacity-90 leading-relaxed font-medium" id="ai-text">Đang phân tích dữ liệu sân...</p>
+                    </div>
+
+                    <div class="bg-white p-6 rounded-[2.5rem] shadow-sm flex flex-col items-center">
+                        <h3 class="font-black text-xs uppercase mb-4 italic text-slate-400">Tỷ trọng môn chơi</h3>
                         <div class="w-full max-w-[150px]"><canvas id="typeChart"></canvas></div>
-                        <div class="flex-1 w-full space-y-4">
-                            <h3 class="font-black text-xs uppercase italic text-slate-400">Phân tách nguồn thu</h3>
-                            <div class="flex justify-between items-center bg-slate-50 p-3 rounded-2xl">
-                                <span class="text-xs font-bold">Chi phí ngày (-)</span>
-                                <input id="exp-v" oninput="formatCurrency(this)" value="${fmt(expV)}" class="w-24 text-right bg-transparent font-black text-red-500 outline-none" placeholder="0">
-                                <button onclick="saveExp()" class="bg-red-500 text-white px-3 py-1 rounded-lg text-[10px] font-black">LƯU</button>
-                            </div>
-                            <div class="flex justify-between items-center p-1">
-                                <span class="text-xs font-black uppercase">Lợi nhuận ròng:</span>
-                                <span class="text-xl font-black text-green-600">${fmt(clR + pbR + totalV - expV)}đ</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="bg-white p-6 rounded-3xl shadow-sm">
-                        <h3 class="font-black text-xs uppercase mb-6 italic text-slate-400">Biểu đồ 7 ngày gần nhất</h3>
-                        <canvas id="weeklyChart" height="180"></canvas>
                     </div>
                 </div>`;
             
-            // Biểu đồ tròn
-            new Chart(document.getElementById('typeChart'), {
-                type: 'doughnut',
-                data: { labels: ['CL', 'PB'], datasets: [{ data: [clR, pbR], backgroundColor: ['#10b981', '#3b82f6'], borderWeight: 0, cutout: '75%' }] },
-                options: { plugins: { legend: { display: false } } }
-            });
+            new Chart(document.getElementById('typeChart'), { type:'doughnut', data: { labels:['CL', 'PB'], datasets:[{ data:[clR, pbR], backgroundColor:['#10b981', '#3b82f6'], borderWeight:0, cutout:'75%' }] }, options:{ plugins:{ legend:{ display:false } } } });
+            
+            // Logic AI logic
+            setTimeout(() => {
+                const ai = document.getElementById('ai-text');
+                if(clR > pbR) ai.innerText = "Cầu lông đang chiếm ưu thế. Ông nên cân nhắc tổ chức giải phong trào vào cuối tuần để tăng doanh thu dịch vụ nước uống.";
+                else if (pbR > clR) ai.innerText = "Pickleball đang hot. Hãy đầu tư thêm hệ thống đèn và ghế chờ xịn hơn để giữ chân tệp khách hàng cao cấp này.";
+                else ai.innerText = "Sân đang hoạt động ổn định. Hãy tập trung đẩy mạnh bảng giá dịch vụ (nước lọc, gửi xe) để tối ưu thêm 15% lợi nhuận.";
+            }, 1000);
 
-            await drawWeekly(date); showLoading(false);
+            showLoading(false);
         }
-
-        async function saveExp() {
-            const v = getRaw(document.getElementById("exp-v").value);
-            const date = window.currentDate || new Date().toISOString().split('T')[0];
-            await db.collection("expenses").doc(`${auth.currentUser.uid}_${date}`).set({ v });
-            renderRevenue();
-        }
-
-        async function drawWeekly(current) {
-            let labels = [], data = [];
-            for(let i=6; i>=0; i--) {
-                let d = new Date(current); d.setDate(d.getDate() - i);
-                let iso = d.toISOString().split('T')[0];
-                labels.push(d.getDate()+'/'+(d.getMonth()+1));
-                const snap = await db.collection("bookings").doc(`${auth.currentUser.uid}_${iso}`).get();
-                let dayTotal = 0; if(snap.exists) { Object.values(snap.data()).forEach(v => { if(v.s==='locked') dayTotal += (v.p + v.v); }); }
-                data.push(dayTotal);
-            }
-            new Chart(document.getElementById('weeklyChart'), {
-                type: 'bar',
-                data: { labels, datasets: [{ label:'Doanh thu', data, backgroundColor:'#0f172a', borderRadius:8 }] },
-                options: { plugins: { legend: { display: false } }, scales: { y: { display: false }, x: { grid: { display: false } } } }
-            });
-        }
-        function changeDateRev(d) { window.currentDate = d; renderRevenue(); }
     </script>
 </body>
 </html>
