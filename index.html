@@ -2,7 +2,7 @@
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
-    <title>RankSport - Module 3: Navigation</title>
+    <title>RankSport - Fix Undefined & Nav</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
@@ -14,7 +14,6 @@
         .sport-font { font-family: 'Oswald', sans-serif; text-transform: uppercase; }
         body { font-family: 'Inter', sans-serif; background-color: #0f172a; color: white; }
         .glass-card { background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.1); }
-        .active-tab { color: #a3e635; border-top: 2px solid #a3e635; }
     </style>
 </head>
 <body class="pb-24">
@@ -23,8 +22,8 @@
         <div class="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-lime-400"></div>
     </div>
 
-    <div id="login-screen" class="min-h-screen hidden flex flex-col justify-center items-center px-6 text-center">
-        <h1 class="text-6xl sport-font italic text-lime-400">RANK<span class="text-white">SPORT</span></h1>
+    <div id="login-screen" class="min-h-screen hidden flex flex-col justify-center items-center px-6">
+        <h1 class="text-6xl sport-font italic text-lime-400 leading-none font-bold">RANK<span class="text-white">SPORT</span></h1>
         <button id="btn-login" class="mt-12 w-full max-w-xs bg-white text-black font-bold py-4 px-6 rounded-full flex items-center justify-center gap-3 shadow-xl">
             ĐĂNG NHẬP VỚI GOOGLE
         </button>
@@ -32,7 +31,7 @@
 
     <div id="app" class="hidden">
         <header class="bg-slate-900 border-b border-slate-800 p-4 flex justify-between items-center sticky top-0 z-40">
-            <span class="sport-font text-xl text-lime-400 italic font-bold tracking-tighter">RANK<span class="text-white">S</span></span>
+            <span class="sport-font text-xl text-lime-400 italic font-bold">RANK<span class="text-white">S</span></span>
             <div class="flex items-center gap-3">
                 <span id="user-name" class="text-[10px] font-semibold uppercase text-gray-400"></span>
                 <button id="btn-logout" class="text-[10px] border border-red-500 text-red-500 px-2 py-1 rounded">THOÁT</button>
@@ -40,23 +39,22 @@
         </header>
 
         <div id="role-screen" class="hidden p-8 flex flex-col items-center justify-center min-h-[70vh]">
-            <h2 class="text-2xl sport-font italic mb-8">CHỌN VAI TRÒ CỦA BẠN</h2>
-            <div class="grid grid-cols-1 gap-4 w-full max-w-xs">
+            <h2 class="text-2xl sport-font italic mb-8">BẠN LÀ AI?</h2>
+            <div class="grid grid-cols-1 gap-4 w-full max-w-sm">
                 <button onclick="chonVaiTro('player')" class="glass-card p-6 rounded-xl hover:border-lime-400 transition-all text-center">
                     <div class="text-3xl mb-1">👟</div>
-                    <div class="sport-font text-xl text-lime-400">VẬN ĐỘNG VIÊN</div>
+                    <div class="sport-font text-xl text-lime-400 font-bold">VẬN ĐỘNG VIÊN</div>
                 </button>
                 <button onclick="chonVaiTro('owner')" class="glass-card p-6 rounded-xl hover:border-blue-400 transition-all text-center">
                     <div class="text-3xl mb-1">🏟️</div>
-                    <div class="sport-font text-xl text-blue-400">CHỦ SÂN</div>
+                    <div class="sport-font text-xl text-blue-400 font-bold">CHỦ SÂN</div>
                 </button>
             </div>
         </div>
 
-        <main id="main-content" class="p-6 min-h-[60vh]"></main>
+        <main id="main-content" class="p-6"></main>
 
-        <nav id="bottom-nav" class="fixed bottom-0 left-0 right-0 bg-slate-900/95 backdrop-blur-md border-t border-slate-800 flex justify-around p-2 shadow-2xl z-50">
-        </nav>
+        <nav id="bottom-nav" class="fixed bottom-0 left-0 right-0 bg-slate-900/90 backdrop-blur-md border-t border-slate-800 flex justify-around p-3 shadow-2xl"></nav>
     </div>
 
     <script>
@@ -100,8 +98,10 @@
             const userDoc = await db.collection("users").doc(user.uid).get();
             if (!userDoc.exists) {
                 document.getElementById("role-screen").classList.remove("hidden");
+                document.getElementById("bottom-nav").classList.add("hidden");
             } else {
                 document.getElementById("role-screen").classList.add("hidden");
+                document.getElementById("bottom-nav").classList.remove("hidden");
                 setupNavigation(userDoc.data().vaiTro);
             }
             hienLoading(false);
@@ -114,42 +114,47 @@
                 uid: user.uid, ten: user.displayName, email: user.email,
                 vaiTro: vaiTro, taoLuc: firebase.firestore.FieldValue.serverTimestamp()
             };
-            await db.collection("users").doc(user.uid).set(duLieu);
-            // Quan trọng: Sau khi lưu, gọi luôn hàm setupNavigation để hết bị "Undefined"
-            document.getElementById("role-screen").classList.add("hidden");
-            setupNavigation(vaiTro);
-            hienLoading(false);
+            try {
+                await db.collection("users").doc(user.uid).set(duLieu);
+                document.getElementById("role-screen").classList.add("hidden");
+                document.getElementById("bottom-nav").classList.remove("hidden");
+                setupNavigation(vaiTro); // Truyền trực tiếp giá trị 'vaiTro' vào đây
+            } catch (e) { alert(e.message); }
+            finally { hienLoading(false); }
         }
 
-        // --- MODULE 3: ĐIỀU HƯỚNG TỰ ĐỘNG ---
         function setupNavigation(vaiTro) {
             const nav = document.getElementById("bottom-nav");
             const main = document.getElementById("main-content");
-            nav.innerHTML = ""; // Xóa menu cũ
+            nav.innerHTML = "";
 
             const tabs = vaiTro === 'player' 
                 ? [ {n: 'SÀN ĐẤU', i: '🏟️'}, {n: 'HẠNG', i: '🏆'}, {n: 'HỒ SƠ', i: '👤'} ]
-                : [ {n: 'QUẢN LÝ', i: '📊'}, {n: 'LỊCH ĐẶT', i: '📅'}, {n: 'CÀI ĐẶT', i: '⚙️'} ];
+                : [ {n: 'SÂN CỦA TÔI', i: '📊'}, {n: 'LỊCH ĐẶT', i: '📅'}, {n: 'DOANH THU', i: '💰'} ];
 
             tabs.forEach((tab, index) => {
                 const btn = document.createElement('button');
-                btn.className = "flex flex-col items-center p-2 text-[10px] sport-font text-gray-500 transition-all";
-                if(index === 0) btn.classList.add('text-lime-400'); // Tab đầu tiên mặc định sáng
+                btn.className = "flex flex-col items-center gap-1 text-[9px] sport-font text-gray-500 font-bold";
+                if(index === 0) btn.className += " text-lime-400";
                 btn.innerHTML = `<span class="text-xl">${tab.i}</span>${tab.n}`;
                 btn.onclick = () => {
-                    // Xử lý chuyển tab sau này
                     document.querySelectorAll('#bottom-nav button').forEach(b => b.classList.remove('text-lime-400'));
                     btn.classList.add('text-lime-400');
-                    main.innerHTML = `<h2 class="sport-font text-xl">ĐANG TẢI: ${tab.n}...</h2>`;
+                    main.innerHTML = `<div class="glass-card p-10 rounded-xl text-center"><h2 class="sport-font text-xl">ĐANG TẢI ${tab.n}...</h2></div>`;
                 };
                 nav.appendChild(btn);
             });
 
-            // Hiển thị mặc định trang đầu tiên
-            main.innerHTML = `<div class="glass-card p-6 rounded-xl border border-lime-400/20 text-center">
-                <h3 class="sport-font text-lime-400 italic">Chào mừng ${vaiTro === 'player' ? 'Chiến binh' : 'Chủ sân'}</h3>
-                <p class="text-xs text-gray-400 mt-2 italic">Module 3 (Nav) đã hoạt động. Sẵn sàng cho Module 4 & 5.</p>
-            </div>`;
+            // Giao diện chào mừng đầu tiên
+            const vaiTroTiengViet = vaiTro === 'player' ? 'VẬN ĐỘNG VIÊN' : 'CHỦ SÂN';
+            main.innerHTML = `
+                <div class="glass-card p-8 rounded-2xl border border-lime-400/30 text-center">
+                    <h2 class="sport-font text-2xl text-lime-400 italic">XÁC THỰC THÀNH CÔNG</h2>
+                    <p class="text-white font-bold mt-2 uppercase tracking-widest">${vaiTroTiengViet}</p>
+                    <hr class="my-4 border-slate-800">
+                    <p class="text-xs text-gray-400 leading-relaxed italic">Menu bên dưới đã được thiết lập theo vai trò của bạn. Hãy thử nhấn các tab!</p>
+                </div>
+            `;
         }
     </script>
 </body>
