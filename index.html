@@ -2,49 +2,55 @@
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
-    <title>RankSport Pro - Quản lý</title>
+    <title>RankSport Pro - Quản lý & Đặt sân</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Oswald:wght@700&family=Inter:wght@400;600&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Oswald:wght@700&display=swap');
+        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; color: #1e293b; }
         .sport-font { font-family: 'Oswald', sans-serif; text-transform: uppercase; }
-        body { font-family: 'Inter', sans-serif; background-color: #0f172a; color: white; margin: 0; }
-        .glass-card { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.1); }
-        input, select { background: rgba(15, 23, 42, 0.6) !important; border: 1px solid rgba(255, 255, 255, 0.1) !important; color: white !important; outline: none; }
-        
-        /* CSS cho Grid Lịch Đặt */
-        .grid-wrapper { display: grid; grid-template-columns: 60px repeat(var(--num-courts, 1), 120px); border-collapse: collapse; }
-        .grid-cell { border: 0.1px solid rgba(255,255,255,0.05); height: 50px; display: flex; align-items: center; justify-content: center; font-size: 11px; }
-        .cell-time { background: #1e293b; color: #94a3b8; font-weight: bold; position: sticky; left: 0; z-index: 20; }
-        .cell-header { background: #334155; color: #a3e635; font-family: 'Oswald'; position: sticky; top: 0; z-index: 10; border-bottom: 2px solid #a3e635; }
-        .status-empty { color: #475569; }
-        .status-booked { background: #ef4444; color: white; font-weight: bold; }
+        .card { background: white; border-radius: 16px; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); border: 1px solid #e2e8f0; }
+        .btn-primary { background: #2563eb; color: white; transition: all 0.2s; }
+        .btn-primary:hover { background: #1d4ed8; transform: translateY(-1px); }
+        /* Grid cho sơ đồ đặt sân */
+        .time-grid { display: grid; grid-template-columns: 80px repeat(auto-fill, minmax(60px, 1fr)); border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; }
+        .grid-header { background: #f1f5f9; font-weight: 700; padding: 12px; border-bottom: 1px solid #e2e8f0; text-align: center; }
+        .grid-item { padding: 10px; border-right: 1px solid #f1f5f9; border-bottom: 1px solid #f1f5f9; text-align: center; font-size: 12px; cursor: pointer; }
+        .status-empty { background: white; color: #94a3b8; }
+        .status-booked { background: #fee2e2; color: #ef4444; border: 1px solid #fecaca; pointer-events: none; }
+        .status-selecting { background: #dbeafe; border: 2px solid #2563eb; color: #2563eb; font-weight: 700; }
     </style>
 </head>
-<body class="pb-24">
+<body class="bg-slate-50 pb-20">
 
-    <div id="loading" class="hidden fixed inset-0 bg-black bg-opacity-80 flex flex-col items-center justify-center z-50">
-        <div class="animate-spin rounded-full h-10 w-10 border-t-2 border-lime-400"></div>
+    <div id="loading" class="hidden fixed inset-0 bg-white/80 flex flex-col items-center justify-center z-50">
+        <div class="animate-spin rounded-full h-10 w-10 border-t-2 border-blue-600"></div>
     </div>
 
-    <div id="app">
-        <header class="bg-slate-900 border-b border-slate-800 p-4 flex justify-between items-center sticky top-0 z-40">
-            <span class="sport-font text-xl text-lime-400 italic font-bold">RANK<span class="text-white">S</span></span>
-            <div id="user-display" class="flex items-center gap-2">
-                <span id="user-name" class="text-[9px] font-bold text-gray-400 uppercase"></span>
-                <button id="btn-logout" class="text-[9px] text-red-400 border border-red-400/30 px-2 py-1 rounded">THOÁT</button>
-            </div>
-        </header>
+    <header class="bg-white border-b border-slate-200 p-4 sticky top-0 z-40 flex justify-between items-center">
+        <span class="sport-font text-2xl text-blue-600 italic font-black tracking-tighter">RANK<span class="text-slate-900">S</span></span>
+        <div class="flex items-center gap-3">
+            <span id="user-name" class="text-xs font-bold text-slate-500 uppercase">CHỦ SÂN</span>
+            <button onclick="firebase.auth().signOut()" class="text-xs text-red-500 font-bold border border-red-200 px-3 py-1.5 rounded-lg">THOÁT</button>
+        </div>
+    </header>
 
-        <main id="main-content" class="p-4 max-w-4xl mx-auto min-h-[70vh]"></main>
+    <main id="main-content" class="p-4 max-w-4xl mx-auto space-y-6"></main>
 
-        <nav id="bottom-nav" class="fixed bottom-0 left-0 right-0 bg-slate-900/95 border-t border-slate-800 flex justify-around p-3 z-50 shadow-2xl"></nav>
-    </div>
+    <nav class="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 flex justify-around p-3 z-50 shadow-lg">
+        <button onclick="renderManagement()" class="flex flex-col items-center gap-1 text-[10px] font-bold text-blue-600">
+            <span class="text-xl">⚙️</span>QUẢN LÝ
+        </button>
+        <button onclick="renderBookingMap()" class="flex flex-col items-center gap-1 text-[10px] font-bold text-slate-400">
+            <span class="text-xl">📅</span>LỊCH ĐẶT
+        </button>
+    </nav>
 
     <script>
+        // Cấu hình Firebase (giữ nguyên thông tin của bạn)
         const firebaseConfig = {
             apiKey: "AIzaSyBpytj0KQybf55iabBzmeg59VL-9oADPHA",
             authDomain: "badrank-89mrd.firebaseapp.com",
@@ -54,146 +60,199 @@
             appId: "1:951939105470:web:968f94f61f94d9b4b08705"
         };
         firebase.initializeApp(firebaseConfig);
-        const auth = firebase.auth();
         const db = firebase.firestore();
+        const auth = firebase.auth();
 
-        function showLoading(s) { document.getElementById("loading").classList.toggle("hidden", !s); }
-
-        document.getElementById("btn-logout").onclick = () => auth.signOut().then(() => location.reload());
-
-        auth.onAuthStateChanged(async (user) => {
-            if (!user) {
-                document.getElementById("main-content").innerHTML = `<div class="p-20 text-center"><button onclick="auth.signInWithPopup(new firebase.auth.GoogleAuthProvider())" class="bg-white text-black px-6 py-3 rounded-full font-bold">ĐĂNG NHẬP GOOGLE</button></div>`;
-                return;
-            }
-            document.getElementById("user-name").innerText = user.displayName;
-            
-            showLoading(true);
-            const userDoc = await db.collection("users").doc(user.uid).get();
-            if (userDoc.exists) {
-                setupNav(userDoc.data().vaiTro);
+        auth.onAuthStateChanged(user => {
+            if (user) {
+                document.getElementById('user-name').innerText = user.displayName || "CHỦ SÂN";
+                renderManagement();
             } else {
-                // Nếu chưa có vai trò, tạm mặc định là owner để test
-                setupNav('owner');
+                location.reload();
             }
-            showLoading(false);
         });
 
-        function setupNav(role) {
-            const nav = document.getElementById("bottom-nav");
-            const menu = [
-                {n: 'LỊCH ĐẶT', i: '📅', f: renderBookingGrid},
-                {n: 'QUẢN LÝ', i: '⚙️', f: renderOwnerFields},
-                {n: 'VÍ', i: '💰', f: () => { document.getElementById("main-content").innerHTML = "Đang phát triển..."; }}
-            ];
-
-            nav.innerHTML = menu.map((m, i) => `
-                <button onclick="activeNav(this, ${i})" class="nav-item flex flex-col items-center gap-1 text-[10px] sport-font font-bold text-gray-500">
-                    <span class="text-xl">${m.i}</span>${m.n}
-                </button>
-            `).join('');
-            
-            window.currentMenu = menu;
-            // Kích hoạt tab đầu tiên
-            const firstBtn = nav.querySelector('button');
-            activeNav(firstBtn, 0);
-        }
-
-        function activeNav(btn, index) {
-            document.querySelectorAll("#bottom-nav button").forEach(b => b.classList.add('text-gray-500'));
-            document.querySelectorAll("#bottom-nav button").forEach(b => b.classList.remove('text-lime-400'));
-            btn.classList.remove('text-gray-500');
-            btn.classList.add('text-lime-400');
-            window.currentMenu[index].f();
-        }
-
-        // --- TAB QUẢN LÝ ---
-        async function renderOwnerFields() {
-            showLoading(true);
+        // --- 1. GIAO DIỆN QUẢN LÝ (MODULE 5 CẢI TIẾN) ---
+        async function renderManagement() {
             const user = auth.currentUser;
             const doc = await db.collection("courts").doc(user.uid).get();
-            const d = doc.exists ? doc.data() : { ten: "", dc: "", qr: "", ds: [] };
-            showLoading(false);
+            const data = doc.exists ? doc.data() : { ten: "", dc: "", qr: "", ds: [] };
 
             document.getElementById("main-content").innerHTML = `
-                <div class="space-y-6">
-                    <div class="glass-card p-5 rounded-2xl space-y-4">
-                        <h2 class="sport-font text-lime-400 italic">📍 Thông tin cơ sở</h2>
-                        <input id="in-ten" type="text" value="${d.ten || ''}" class="w-full p-4 rounded-xl" placeholder="Tên cụm sân">
-                        <input id="in-dc" type="text" value="${d.dc || ''}" class="w-full p-4 rounded-xl" placeholder="Địa chỉ">
-                        <input id="in-qr" type="text" value="${d.qr || ''}" class="w-full p-4 rounded-xl" placeholder="Link QR">
+                <div class="card p-6 space-y-6">
+                    <h2 class="sport-font text-xl text-blue-600">Thiết lập dịch vụ sân</h2>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="space-y-1">
+                            <label class="text-[10px] font-bold text-slate-400 uppercase">Tên cụm sân</label>
+                            <input id="in-ten" type="text" value="${data.ten}" class="w-full bg-slate-50 border border-slate-200 p-3 rounded-xl text-sm" placeholder="VD: Sân Cầu Phạm Nguyên">
+                        </div>
+                        <div class="space-y-1">
+                            <label class="text-[10px] font-bold text-slate-400 uppercase">Vị trí / Địa chỉ</label>
+                            <input id="in-dc" type="text" value="${data.dc}" class="w-full bg-slate-50 border border-slate-200 p-3 rounded-xl text-sm" placeholder="VD: Số 1 Tôn Thất Thuyết">
+                        </div>
                     </div>
 
-                    <div class="glass-card p-5 rounded-2xl">
-                        <h2 class="sport-font text-lime-400 mb-4 italic">🏸 Danh sách sân con</h2>
-                        <div class="overflow-x-auto">
-                            <table class="w-full text-left">
-                                <tbody id="court-rows">
-                                    ${(d.ds || []).map(s => createRowHTML(s)).join('')}
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="space-y-1">
+                            <label class="text-[10px] font-bold text-slate-400 uppercase">Loại hình kinh doanh</label>
+                            <select id="sel-type" class="w-full bg-slate-50 border border-slate-200 p-3 rounded-xl text-sm">
+                                <option value="Cầu lông">Cầu lông</option>
+                                <option value="Pickleball">Pickleball</option>
+                                <option value="Bóng đá">Bóng đá</option>
+                                <option value="Tennis">Tennis</option>
+                            </select>
+                        </div>
+                        <div class="space-y-1">
+                            <label class="text-[10px] font-bold text-slate-400 uppercase">Số lượng sân</label>
+                            <div class="flex gap-2">
+                                <input id="in-count" type="number" class="w-full bg-slate-50 border border-slate-200 p-3 rounded-xl text-sm" placeholder="VD: 5">
+                                <button onclick="generateCourts()" class="bg-slate-900 text-white px-4 rounded-xl text-xs font-bold">TẠO</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="space-y-1">
+                        <label class="text-[10px] font-bold text-slate-400 uppercase">Link ảnh QR nhận tiền</label>
+                        <input id="in-qr" type="text" value="${data.qr}" class="w-full bg-slate-50 border border-slate-200 p-3 rounded-xl text-sm font-mono" placeholder="Dán link ảnh QR tại đây">
+                    </div>
+
+                    <div class="border-t border-slate-100 pt-4">
+                        <h3 class="text-xs font-black mb-3 flex items-center gap-2">📊 BẢNG DỊCH VỤ SÂN</h3>
+                        <div class="overflow-x-auto rounded-xl border border-slate-200">
+                            <table class="w-full text-left text-sm">
+                                <thead class="bg-slate-50 text-slate-500 text-[10px] uppercase font-black">
+                                    <tr>
+                                        <th class="p-3">STT</th>
+                                        <th class="p-3">Tên sân con</th>
+                                        <th class="p-3">Loại hình</th>
+                                        <th class="p-3">Giá (VND/h)</th>
+                                        <th class="p-3"></th>
+                                    </tr>
+                                </thead>
+                                <tbody id="court-table-body">
+                                    ${data.ds.map((s, i) => createRowHTML(i + 1, s.t, s.l, s.g)).join('')}
                                 </tbody>
                             </table>
                         </div>
-                        <button onclick="addRow()" class="mt-4 w-full border border-dashed border-gray-500 py-2 rounded-lg text-xs">+ THÊM SÂN</button>
                     </div>
-                    <button onclick="saveAll()" class="w-full bg-lime-500 text-black py-4 rounded-xl font-bold sport-font uppercase tracking-widest">LƯU CẤU HÌNH</button>
+
+                    <button onclick="saveManagement()" class="w-full btn-primary py-4 rounded-2xl font-black sport-font tracking-widest text-lg shadow-blue-200 shadow-lg">XÁC NHẬN CẬP NHẬT</button>
                 </div>
             `;
         }
 
-        function createRowHTML(s = {t:'', l:'Cầu lông', g:''}) {
-            return `<tr class="border-b border-slate-800">
-                <td class="p-2"><input class="bg-transparent border-none w-full text-xs c-t" value="${s.t}" placeholder="Tên sân"></td>
-                <td class="p-2"><select class="bg-transparent border-none text-xs c-l">
-                    <option value="Cầu lông" ${s.l==='Cầu lông'?'selected':''}>Cầu lông</option>
-                    <option value="Pickleball" ${s.l==='Pickleball'?'selected':''}>Pickleball</option>
-                </select></td>
-                <td class="p-2"><input class="bg-transparent border-none w-full text-xs c-g" value="${s.g}" placeholder="Giá"></td>
-                <td class="p-2 text-red-500" onclick="this.closest('tr').remove()">✕</td>
-            </tr>`;
+        function createRowHTML(stt, ten, loai, gia) {
+            return `
+                <tr class="border-t border-slate-100 hover:bg-slate-50 transition-colors">
+                    <td class="p-3 font-bold text-slate-400">${stt}</td>
+                    <td class="p-3"><input class="w-full bg-transparent border-none p-1 font-bold c-ten" value="${ten}"></td>
+                    <td class="p-3"><span class="bg-blue-50 text-blue-600 px-2 py-1 rounded text-[10px] font-bold c-loai">${loai}</span></td>
+                    <td class="p-3"><input type="number" class="w-full bg-transparent border-none p-1 font-mono text-blue-600 font-bold c-gia" value="${gia}"></td>
+                    <td class="p-3"><button onclick="this.closest('tr').remove()" class="text-red-400">✕</button></td>
+                </tr>
+            `;
         }
 
-        function addRow() { document.getElementById("court-rows").insertAdjacentHTML('beforeend', createRowHTML()); }
+        function generateCourts() {
+            const type = document.getElementById("sel-type").value;
+            const count = parseInt(document.getElementById("in-count").value);
+            const body = document.getElementById("court-table-body");
+            if (!count) return;
+            
+            let html = "";
+            for (let i = 1; i <= count; i++) {
+                html += createRowHTML(i, `Sân ${i}`, type, 100000);
+            }
+            body.innerHTML = html;
+        }
 
-        async function saveAll() {
-            showLoading(true);
-            const ds = [];
-            document.querySelectorAll("#court-rows tr").forEach(tr => {
-                ds.push({ t: tr.querySelector(".c-t").value, l: tr.querySelector(".c-l").value, g: tr.querySelector(".c-g").value });
-            });
-            const data = { ten: document.getElementById("in-ten").value, dc: document.getElementById("in-dc").value, qr: document.getElementById("in-qr").value, ds: ds };
+        async function saveManagement() {
+            const rows = document.querySelectorAll("#court-table-body tr");
+            const ds = Array.from(rows).map(row => ({
+                t: row.querySelector(".c-ten").value,
+                l: row.querySelector(".c-loai").innerText,
+                g: row.querySelector(".c-gia").value
+            }));
+
+            const data = {
+                ten: document.getElementById("in-ten").value,
+                dc: document.getElementById("in-dc").value,
+                qr: document.getElementById("in-qr").value,
+                ds: ds
+            };
+
             await db.collection("courts").doc(auth.currentUser.uid).set(data);
-            showLoading(false);
-            alert("Đã lưu thành công!");
+            alert("Đã cập nhật cấu hình sân thành công!");
         }
 
-        // --- TAB LỊCH ĐẶT ---
-        async function renderBookingGrid() {
-            showLoading(true);
+        // --- 2. GIAO DIỆN SƠ ĐỒ ĐẶT SÂN (DÀNH CHO VĐV THAM KHẢO) ---
+        async function renderBookingMap() {
             const user = auth.currentUser;
             const doc = await db.collection("courts").doc(user.uid).get();
-            const main = document.getElementById("main-content");
+            if (!doc.exists) return;
+            const data = doc.data();
 
-            if (!doc.exists || !doc.data().ds || doc.data().ds.length === 0) {
-                main.innerHTML = `<div class="p-20 text-center text-gray-500">Vui lòng sang Tab Quản Lý để thêm sân.</div>`;
-                showLoading(false); return;
-            }
+            document.getElementById("main-content").innerHTML = `
+                <div class="card p-5 space-y-4">
+                    <div class="flex items-center gap-4">
+                         <div class="w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center text-white text-xl">🏟️</div>
+                         <div>
+                            <h2 class="font-black text-lg">${data.ten}</h2>
+                            <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest">📍 ${data.dc}</p>
+                         </div>
+                    </div>
 
-            const courts = doc.data().ds;
-            document.documentElement.style.setProperty('--num-courts', courts.length);
+                    <div class="flex justify-between text-[10px] font-bold uppercase pt-4 border-t border-slate-100">
+                        <div class="flex items-center gap-1"><span class="w-3 h-3 bg-white border border-slate-200 rounded-sm"></span> Trống</div>
+                        <div class="flex items-center gap-1"><span class="w-3 h-3 bg-red-100 border border-red-200 rounded-sm"></span> Đã đặt</div>
+                        <div class="flex items-center gap-1"><span class="w-3 h-3 bg-blue-100 border border-blue-400 rounded-sm"></span> Chọn</div>
+                    </div>
 
-            let html = `<div class="overflow-auto glass-card rounded-2xl max-h-[65vh]"><div class="grid-wrapper">`;
-            html += `<div class="grid-cell cell-header cell-time">Giờ</div>`;
-            courts.forEach(c => html += `<div class="grid-cell cell-header">${c.t}</div>`);
+                    <div class="overflow-x-auto">
+                        <div class="min-w-[500px] border border-slate-200 rounded-xl overflow-hidden">
+                            <div class="grid grid-cols-10 bg-slate-50 border-b border-slate-200 text-[9px] font-black uppercase text-slate-400">
+                                <div class="p-3 border-r border-slate-200">Giờ / Sân</div>
+                                ${data.ds.map(s => `<div class="p-3 text-center border-r border-slate-200">${s.t}</div>`).join('')}
+                            </div>
+                            
+                            <div id="grid-body">
+                                ${generateTimeSlots(data.ds)}
+                            </div>
+                        </div>
+                    </div>
 
-            for (let h = 5; h <= 22; h++) {
-                html += `<div class="grid-cell cell-time">${h}:00</div>`;
-                courts.forEach(() => {
-                    html += `<div onclick="this.classList.toggle('status-booked'); this.innerText = this.classList.contains('status-booked') ? 'KHÓA' : 'Trống'" class="grid-cell status-empty cursor-pointer">Trống</div>`;
-                });
-            }
-            html += `</div></div>`;
-            main.innerHTML = `<h2 class="sport-font text-lime-400 mb-4 italic">Lịch Sân Hôm Nay</h2>` + html;
-            showLoading(false);
+                    <div class="bg-slate-900 rounded-2xl p-4 flex justify-between items-center text-white">
+                        <div>
+                            <p class="text-[9px] text-slate-400 font-bold">TỔNG CỘNG</p>
+                            <p class="text-xl font-black text-blue-400">0 VND</p>
+                        </div>
+                        <button class="bg-blue-600 px-6 py-3 rounded-xl font-black text-xs">ĐẶT LỊCH NGAY</button>
+                    </div>
+                </div>
+            `;
+        }
+
+        function generateTimeSlots(courts) {
+            let html = "";
+            const times = ["5:00", "6:00", "7:00", "8:00", "9:00", "10:00", "17:00", "18:00", "19:00", "20:00"];
+            
+            times.forEach(t => {
+                html += `<div class="grid grid-cols-10 border-b border-slate-100 items-center">
+                    <div class="p-3 text-[10px] font-bold text-slate-500 border-r border-slate-100 bg-slate-50/50">${t}</div>
+                    ${courts.map((s, idx) => `
+                        <div onclick="toggleSlot(this, ${s.g})" class="p-3 h-12 border-r border-slate-100 text-center transition-all flex items-center justify-center cursor-pointer group">
+                             <div class="w-full h-full rounded-lg border border-transparent group-hover:border-blue-200 transition-all"></div>
+                        </div>
+                    `).join('')}
+                </div>`;
+            });
+            return html;
+        }
+
+        function toggleSlot(el, price) {
+            el.classList.toggle("status-selecting");
+            // Tính toán tiền ở đây
         }
     </script>
 </body>
