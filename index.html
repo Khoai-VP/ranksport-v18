@@ -2,7 +2,7 @@
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
-    <title>RankSport v7.5 - Hệ Thống Quản Lý Toàn Diện</title>
+    <title>RankSport v8.0 - Business Pro</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
@@ -10,56 +10,44 @@
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Oswald:wght@700&display=swap');
-        body { font-family: 'Inter', sans-serif; background: #f8fafc; color: #0f172a; }
-        .sport-font { font-family: 'Oswald', sans-serif; text-transform: uppercase; }
-        .grid-container { display: grid; grid-template-columns: 80px repeat(var(--num-courts, 1), minmax(120px, 1fr)); background: white; border: 1px solid #e2e8f0; }
-        .grid-cell { border: 0.5px solid #f1f5f9; height: 50px; display: flex; align-items: center; justify-content: center; cursor: pointer; position: relative; transition: all 0.1s; }
-        .header-cell { background: #0f172a; color: white; position: sticky; top: 0; z-index: 30; font-family: 'Oswald'; }
-        .cell-time { background: #f8fafc; font-weight: 800; border-right: 2px solid #cbd5e1; position: sticky; left: 0; z-index: 20; color: #64748b; font-size: 11px; }
-        .status-manual-locked { background: #1e293b !important; color: #fbbf24 !important; font-weight: 800; border-left-width: 5px !important; z-index: 5; }
-        .is-selecting { background: #dbeafe !important; border: 2px solid #2563eb !important; z-index: 10; }
-        .no-scrollbar::-webkit-scrollbar { display: none; }
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;900&family=Oswald:wght@700&display=swap');
+        body { font-family: 'Inter', sans-serif; background: #f8fafc; }
+        .sport-font { font-family: 'Oswald', sans-serif; }
+        .grid-container { display: grid; grid-template-columns: 80px repeat(var(--num-courts, 1), minmax(120px, 1fr)); background: white; }
+        .grid-cell { border: 0.5px solid #f1f5f9; height: 50px; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+        .header-cell { background: #0f172a; color: white; position: sticky; top: 0; z-index: 30; }
+        .cell-time { background: #f8fafc; font-weight: 800; border-right: 2px solid #cbd5e1; position: sticky; left: 0; z-index: 20; font-size: 11px; }
+        .is-cl { border-left: 5px solid #10b981 !important; background: #1e293b !important; color: #10b981 !important; }
+        .is-pb { border-left: 5px solid #3b82f6 !important; background: #1e293b !important; color: #3b82f6 !important; }
+        .is-selecting { background: #dbeafe !important; border: 2px solid #2563eb !important; }
     </style>
 </head>
-<body class="pb-28">
+<body class="pb-32">
 
-    <div id="loading" class="hidden fixed inset-0 bg-white/80 flex flex-col items-center justify-center z-[100] backdrop-blur-sm">
-        <div class="animate-spin rounded-full h-14 w-14 border-t-4 border-blue-600 border-r-4 border-r-transparent"></div>
-        <p class="mt-4 font-black text-[10px] uppercase tracking-[0.2em] italic">Đang đồng bộ dữ liệu hệ thống...</p>
+    <div id="loading" class="hidden fixed inset-0 bg-white/90 flex flex-col items-center justify-center z-[100]">
+        <div class="animate-spin rounded-full h-12 w-12 border-t-4 border-blue-600"></div>
     </div>
-
-    <header class="bg-white/80 backdrop-blur-md border-b p-4 sticky top-0 z-40 flex justify-between items-center">
-        <div class="flex flex-col">
-            <span class="sport-font text-2xl text-blue-600 italic font-black leading-none">RANK<span class="text-slate-900">S</span></span>
-            <span id="court-name-display" class="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">Hệ thống quản lý v7.5</span>
-        </div>
-        <div id="user-info" class="text-[9px] font-black text-slate-500 bg-slate-100 px-3 py-1.5 rounded-full border border-slate-200 uppercase">Khách</div>
-    </header>
 
     <main id="main-content" class="p-4 max-w-6xl mx-auto space-y-6"></main>
 
-    <div id="lock-panel" class="hidden fixed bottom-28 left-4 right-4 bg-slate-900 shadow-2xl rounded-3xl p-6 z-[50] border border-white/10 animate-slideUp">
-        <div class="flex justify-between items-center mb-5">
-            <div>
-                <div id="txt-duration" class="text-white font-black text-xl italic leading-none">0.0 GIỜ</div>
-                <div id="txt-money" class="text-blue-400 text-xs font-bold mt-1">0 VNĐ</div>
-            </div>
+    <div id="lock-panel" class="hidden fixed bottom-24 left-4 right-4 bg-slate-900 shadow-2xl rounded-3xl p-6 z-[50] text-white">
+        <div class="flex justify-between items-center mb-4">
+            <div><div id="txt-duration" class="font-black text-xl italic">0 GIỜ</div><div id="txt-money" class="text-blue-400 text-xs font-bold">0 VNĐ</div></div>
             <div class="text-right">
-                <p class="text-[9px] text-slate-500 uppercase font-black italic mb-1">Dịch vụ (Nước, Cầu, Xe...)</p>
-                <input type="text" id="input-service" oninput="formatCurrency(this)" class="bg-white/5 text-white font-black text-right border-b-2 border-blue-500 outline-none w-32 text-base py-1" placeholder="0">
+                <p class="text-[9px] text-slate-400 uppercase font-black italic mb-1">Dịch vụ thêm</p>
+                <input type="text" id="input-service" oninput="formatCurrency(this)" class="bg-white/10 text-white font-black text-right border-b-2 border-blue-500 outline-none w-28 text-base" placeholder="0">
             </div>
         </div>
-        <div class="flex gap-3">
-            <button onclick="actionLock('locked')" class="flex-1 bg-amber-400 hover:bg-amber-300 text-slate-900 py-4 rounded-2xl font-black text-xs uppercase transition-all shadow-lg active:scale-95">XÁC NHẬN KHÓA</button>
-            <button onclick="actionLock('empty')" class="flex-[0.6] bg-slate-800 hover:bg-slate-700 text-white py-4 rounded-2xl font-black text-xs uppercase transition-all active:scale-95">MỞ TRỐNG</button>
+        <div class="flex gap-2">
+            <button onclick="actionLock('locked')" class="flex-1 bg-blue-600 py-4 rounded-2xl font-black text-xs uppercase">Xác nhận</button>
+            <button onclick="actionLock('empty')" class="flex-1 bg-slate-700 py-4 rounded-2xl font-black text-xs uppercase">Hủy/Mở trống</button>
         </div>
     </div>
 
-    <nav class="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-md border-t flex justify-around p-4 z-50 shadow-2xl">
-        <button onclick="renderManagement()" class="flex flex-col items-center gap-1 text-[9px] font-black text-slate-400 hover:text-blue-600 transition-colors uppercase"><span>⚙️</span>Cấu hình</button>
-        <button onclick="renderBookingGrid()" class="flex flex-col items-center gap-1 text-[9px] font-black text-slate-400 hover:text-blue-600 transition-colors uppercase"><span>📅</span>Lịch đặt</button>
-        <button onclick="renderRevenue()" class="flex flex-col items-center gap-1 text-[9px] font-black text-slate-400 hover:text-blue-600 transition-colors uppercase"><span>💰</span>Doanh thu</button>
+    <nav class="fixed bottom-0 left-0 right-0 bg-white border-t flex justify-around p-4 z-40">
+        <button onclick="renderManagement()" class="flex flex-col items-center text-[10px] font-black text-slate-400 hover:text-blue-600 uppercase"><span>⚙️</span>Cấu hình</button>
+        <button onclick="renderBookingGrid()" class="flex flex-col items-center text-[10px] font-black text-slate-400 hover:text-blue-600 uppercase"><span>📅</span>Lịch đặt</button>
+        <button onclick="renderRevenue()" class="flex flex-col items-center text-[10px] font-black text-slate-400 hover:text-blue-600 uppercase"><span>💰</span>Doanh thu</button>
     </nav>
 
     <script>
@@ -69,171 +57,105 @@
         const auth = firebase.auth();
 
         const fmt = (v) => new Intl.NumberFormat('vi-VN').format(v || 0);
-        function formatCurrency(input) {
-            let val = input.value.replace(/\D/g, "");
-            input.value = val.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
-        }
-        function getRaw(str) { return parseFloat(str.toString().replace(/\./g, '')) || 0; }
+        function formatCurrency(i) { let v = i.value.replace(/\D/g, ""); i.value = v.replace(/\B(?=(\d{3})+(?!\d))/g, "."); }
+        function getRaw(s) { return parseFloat(s.toString().replace(/\./g, '')) || 0; }
         function showLoading(s) { document.getElementById('loading').classList.toggle('hidden', !s); }
 
-        auth.onAuthStateChanged(user => { 
-            if (user) { 
-                document.getElementById('user-info').innerText = user.displayName; 
-                renderBookingGrid(); 
-            } else { 
-                renderLogin(); 
-            } 
-        });
+        auth.onAuthStateChanged(user => { if(user) renderBookingGrid(); else renderLogin(); });
 
         function renderLogin() {
-            document.getElementById('main-content').innerHTML = `
-                <div class="h-[70vh] flex flex-col items-center justify-center space-y-6">
-                    <div class="text-center"><h1 class="sport-font text-5xl font-black text-slate-900 italic">RANK<span class="text-blue-600">S</span></h1><p class="text-xs font-bold text-slate-400 tracking-widest uppercase">Badminton & Pickleball Management</p></div>
-                    <button onclick="auth.signInWithPopup(new firebase.auth.GoogleAuthProvider())" class="bg-slate-900 text-white px-12 py-5 rounded-3xl font-black text-sm shadow-2xl hover:bg-blue-600 transition-all active:scale-95">BẮT ĐẦU QUẢN LÝ NGAY</button>
-                </div>`;
+            document.getElementById('main-content').innerHTML = `<div class="h-screen flex items-center justify-center"><button onclick="auth.signInWithPopup(new firebase.auth.GoogleAuthProvider())" class="bg-blue-600 text-white px-12 py-5 rounded-3xl font-black">ĐĂNG NHẬP CHỦ SÂN</button></div>`;
         }
 
-        // --- TAB 1: CẤU HÌNH (v5 + Yêu cầu mới v7.5) ---
+        // --- TAB 1: CẤU HÌNH ---
         async function renderManagement() {
             showLoading(true);
             const doc = await db.collection("courts").doc(auth.currentUser.uid).get();
-            const d = doc.exists ? doc.data() : { ten: "", dc: "", ds: [], services: [] };
+            const d = doc.exists ? doc.data() : { ten:"", dc:"", ds:[], services:[] };
             showLoading(false);
             document.getElementById("main-content").innerHTML = `
-                <div class="space-y-6 animate-fadeIn">
-                    <div class="bg-white p-6 rounded-[2rem] shadow-sm border border-slate-100">
-                        <h2 class="sport-font text-blue-600 text-lg mb-4 italic">Thông tin cụm sân</h2>
-                        <div class="space-y-3">
-                            <input id="m-ten" value="${d.ten || ''}" class="w-full p-4 bg-slate-50 border-none rounded-2xl text-sm font-bold shadow-inner" placeholder="Tên sân">
-                            <input id="m-dc" value="${d.dc || ''}" class="w-full p-4 bg-slate-50 border-none rounded-2xl text-sm font-bold shadow-inner" placeholder="Địa chỉ chi tiết">
-                        </div>
+                <div class="space-y-6">
+                    <div class="bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
+                        <h2 class="font-black text-blue-600 mb-4 italic uppercase text-sm">Hồ sơ sân</h2>
+                        <input id="m-ten" value="${d.ten}" class="w-full p-4 mb-2 bg-slate-50 rounded-2xl font-bold" placeholder="Tên cụm sân">
+                        <input id="m-dc" value="${d.dc}" class="w-full p-4 bg-slate-50 rounded-2xl font-bold" placeholder="Địa chỉ">
                     </div>
-
-                    <div class="bg-white p-6 rounded-[2rem] shadow-sm border border-slate-100">
-                        <h2 class="sport-font text-slate-800 text-lg mb-4 italic">Quản lý danh sách sân</h2>
-                        <div class="flex gap-2 mb-6 bg-slate-900 p-3 rounded-2xl shadow-xl">
-                            <select id="m-type" class="flex-1 bg-transparent text-white font-bold text-xs p-2 outline-none"><option class="text-black">Cầu lông</option><option class="text-black">Pickleball</option></select>
-                            <input id="m-count" type="number" class="w-16 rounded-xl text-center font-black text-sm" placeholder="SL">
-                            <button onclick="appendCourts()" class="bg-blue-600 text-white px-6 rounded-xl font-black text-[10px] uppercase">Thêm</button>
+                    <div class="bg-white p-6 rounded-3xl shadow-sm">
+                        <h2 class="font-black text-slate-800 mb-4 italic text-sm uppercase">Danh sách sân</h2>
+                        <div class="flex gap-2 mb-4 bg-slate-900 p-3 rounded-2xl">
+                            <select id="m-type" class="flex-1 bg-transparent text-white font-bold outline-none"><option>Cầu lông</option><option>Pickleball</option></select>
+                            <input id="m-count" type="number" class="w-16 rounded-xl text-center font-bold" placeholder="SL">
+                            <button onclick="addCourts()" class="bg-blue-600 text-white px-4 rounded-xl font-black text-[10px]">THÊM</button>
                         </div>
-                        <div class="overflow-x-auto"><table class="w-full text-[11px] text-left">
-                            <thead><tr class="text-slate-400 uppercase font-black"><th class="pb-3">Sân</th><th class="pb-3 text-right">Giá / 1h</th><th></th></tr></thead>
-                            <tbody id="court-list">${(d.ds || []).map(s => `
-                                <tr class="border-b"><td class="py-4"><input class="font-black text-slate-800 c-t bg-transparent outline-none w-full" value="${s.t}"><span class="block text-[8px] text-slate-400 font-bold uppercase c-l">${s.l}</span></td>
-                                <td class="py-4"><input oninput="formatCurrency(this)" class="font-mono font-black text-blue-600 text-right w-full bg-transparent outline-none c-g" value="${fmt(s.g)}"></td>
-                                <td class="text-right py-4"><button onclick="this.closest('tr').remove()" class="text-red-300 hover:text-red-500 font-bold px-2">✕</button></td></tr>`).join('')}
-                            </tbody></table></div>
+                        <table class="w-full text-xs"><tbody id="court-list">${d.ds.map(s => `
+                            <tr class="border-b"><td class="py-3 font-black c-t">${s.t}</td><td class="font-bold text-slate-400 c-l">${s.l}</td>
+                            <td><input oninput="formatCurrency(this)" class="w-full text-right font-mono font-black text-blue-600 c-g bg-transparent" value="${fmt(s.g)}"></td>
+                            <td class="text-right"><button onclick="this.closest('tr').remove()" class="text-red-400">✕</button></td></tr>`).join('')}</tbody></table>
                     </div>
-
-                    <div class="bg-white p-6 rounded-[2rem] shadow-sm border-t-8 border-amber-400">
-                        <h2 class="sport-font text-slate-800 text-lg mb-4 italic">Dịch vụ & Phí kinh doanh</h2>
-                        <div class="flex gap-2 mb-4">
-                            <input id="s-n" class="flex-1 p-4 bg-slate-50 rounded-2xl text-xs font-bold shadow-inner" placeholder="Tên phí">
-                            <input id="s-p" oninput="formatCurrency(this)" class="w-28 p-4 bg-slate-50 rounded-2xl text-xs font-bold shadow-inner" placeholder="Giá">
-                            <button onclick="addSvc()" class="bg-slate-900 text-white px-5 rounded-2xl font-black text-[10px]">THÊM</button>
-                        </div>
-                        <div id="service-list" class="grid grid-cols-1 gap-2">${(d.services || []).map(s => `
-                            <div class="flex justify-between items-center bg-slate-50 p-4 rounded-2xl"><span class="font-bold text-xs text-slate-700 n">${s.n}</span><span class="font-mono font-black text-blue-600 p">${fmt(s.p)}đ</span><button onclick="this.parentElement.remove()" class="text-red-300">✕</button></div>`).join('')}</div>
-                    </div>
-
-                    <button onclick="saveAll()" class="w-full bg-blue-600 text-white py-6 rounded-[2rem] font-black text-sm shadow-xl active:scale-95 transition-all uppercase tracking-widest">Lưu tất cả cấu hình</button>
+                    <button onclick="saveC()" class="w-full bg-blue-600 text-white py-5 rounded-3xl font-black uppercase shadow-xl">Lưu cấu hình</button>
                 </div>`;
         }
 
-        function appendCourts() {
-            const c = parseInt(document.getElementById("m-count").value), t = document.getElementById("m-type").value;
-            if(!c) return; const list = document.getElementById("court-list"); let max = 0;
-            list.querySelectorAll("tr").forEach(r => { if(r.querySelector(".c-l").innerText===t){ const m = r.querySelector(".c-t").value.match(/\d+/); if(m) max = Math.max(max, parseInt(m[0])); }});
-            for (let i=1; i<=c; i++) {
-                const label = t === 'Cầu lông' ? 'CL' : 'PB';
-                list.insertAdjacentHTML('beforeend', `<tr class="border-b"><td class="py-4"><input class="font-black text-slate-800 c-t bg-transparent outline-none w-full" value="Sân ${max+i} [${label}]"><span class="block text-[8px] text-slate-400 font-bold uppercase c-l">${t}</span></td>
-                <td class="py-4"><input oninput="formatCurrency(this)" class="font-mono font-black text-blue-600 text-right w-full bg-transparent outline-none c-g" value="100.000"></td>
-                <td class="text-right py-4"><button onclick="this.closest('tr').remove()" class="text-red-300 hover:text-red-500 font-bold px-2">✕</button></td></tr>`);
+        function addCourts() {
+            const c = parseInt(document.getElementById("m-count").value), t = document.getElementById("m-type").value; if(!c) return;
+            const list = document.getElementById("court-list");
+            for(let i=1; i<=c; i++) {
+                list.insertAdjacentHTML('beforeend', `<tr class="border-b"><td class="py-3 font-black c-t">Sân mới [${t==='Cầu lông'?'CL':'PB'}]</td><td class="font-bold text-slate-400 c-l">${t}</td>
+                <td><input oninput="formatCurrency(this)" class="w-full text-right font-mono font-black text-blue-600 c-g bg-transparent" value="100.000"></td>
+                <td class="text-right"><button onclick="this.closest('tr').remove()" class="text-red-400">✕</button></td></tr>`);
             }
         }
 
-        function addSvc() {
-            const n = document.getElementById("s-n").value, p = document.getElementById("s-p").value; if(!n||!p) return;
-            document.getElementById("service-list").insertAdjacentHTML('beforeend', `<div class="flex justify-between items-center bg-slate-50 p-4 rounded-2xl"><span class="font-bold text-xs text-slate-700 n">${n}</span><span class="font-mono font-black text-blue-600 p">${p}đ</span><button onclick="this.parentElement.remove()" class="text-red-300">✕</button></div>`);
-            document.getElementById("s-n").value=""; document.getElementById("s-p").value="";
-        }
-
-        async function saveAll() {
+        async function saveC() {
             showLoading(true);
-            const ds = []; document.querySelectorAll("#court-list tr").forEach(tr => ds.push({ t: tr.querySelector(".c-t").value, l: tr.querySelector(".c-l").innerText, g: getRaw(tr.querySelector(".c-g").value) }));
-            const services = []; document.querySelectorAll("#service-list > div").forEach(div => services.push({ n: div.querySelector(".n").innerText, p: getRaw(div.querySelector(".p").innerText) }));
-            await db.collection("courts").doc(auth.currentUser.uid).set({ ten: document.getElementById("m-ten").value, dc: document.getElementById("m-dc").value, ds, services }, {merge: true});
-            showLoading(false); alert("Đã cập nhật hệ thống!");
+            const ds = []; document.querySelectorAll("#court-list tr").forEach(tr => ds.push({ t:tr.querySelector(".c-t").innerText, l:tr.querySelector(".c-l").innerText, g:getRaw(tr.querySelector(".c-g").value) }));
+            await db.collection("courts").doc(auth.currentUser.uid).set({ ten:document.getElementById("m-ten").value, dc:document.getElementById("m-dc").value, ds }, {merge:true});
+            showLoading(false); alert("Xong!");
         }
 
-        // --- TAB 2: LỊCH ĐẶT (Xương sống v5 + Màu sắc v7) ---
+        // --- TAB 2: LỊCH ĐẶT ---
         async function renderBookingGrid() {
             showLoading(true);
             const doc = await db.collection("courts").doc(auth.currentUser.uid).get();
             if(!doc.exists) { showLoading(false); renderManagement(); return; }
-            const data = doc.data(); window.courtConfig = data.ds;
+            const d = doc.data(); window.courtConfig = d.ds;
             const date = window.currentDate || new Date().toISOString().split('T')[0];
-            document.getElementById("court-name-display").innerText = data.ten || "CHƯA CÀI TÊN SÂN";
-
             document.getElementById("main-content").innerHTML = `
-                <div class="bg-white p-5 rounded-[2.5rem] shadow-sm space-y-5">
-                    <div class="flex justify-between items-center">
-                        <div class="flex flex-col"><h2 class="font-black text-slate-900 italic text-sm">BẢNG ĐIỀU KHIỂN SÂN</h2><p class="text-[9px] font-bold text-slate-400 uppercase">${date}</p></div>
-                        <input type="date" value="${date}" onchange="changeDate(this.value)" class="text-[10px] font-black bg-slate-100 p-3 rounded-2xl outline-none border-none">
+                <div class="bg-white p-4 rounded-[2rem] shadow-sm">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="font-black text-sm italic uppercase">${d.ten}</h2>
+                        <input type="date" value="${date}" onchange="changeDate(this.value)" class="text-[10px] font-black bg-slate-100 p-2 rounded-xl">
                     </div>
-                    <div class="flex gap-2 overflow-x-auto pb-2 no-scrollbar">${generateQuickDates(date)}</div>
-                    <div class="overflow-x-auto rounded-[2rem] border-2 border-slate-50 shadow-inner">
-                        <div class="grid-container" style="--num-courts: ${data.ds.length}">
-                            <div class="grid-cell header-cell text-[9px] italic">THỜI GIAN</div>
-                            ${data.ds.map(s => {
-                                const isCL = s.l === 'Cầu lông';
-                                return `<div class="grid-cell header-cell flex flex-col pt-1 border-b-4 ${isCL ? 'border-emerald-500' : 'border-blue-500'}">
-                                    <span class="text-[9px] font-black leading-none">${s.t}</span>
-                                    <span class="text-[6px] opacity-60 uppercase mt-1 tracking-tighter">${isCL ? 'BADMINTON' : 'PICKLEBALL'}</span>
-                                </div>`;
-                            }).join('')}
-                            ${generateGridRows(data.ds)}
+                    <div class="overflow-x-auto rounded-3xl border">
+                        <div class="grid-container" style="--num-courts: ${d.ds.length}">
+                            <div class="grid-cell header-cell text-[9px]">GIỜ</div>
+                            ${d.ds.map(s => `<div class="grid-cell header-cell flex flex-col pt-1 border-b-4 ${s.l.includes('Cầu')?'border-emerald-500':'border-blue-500'}">
+                                <span class="text-[9px] font-black leading-none">${s.t}</span>
+                                <span class="text-[6px] opacity-60 uppercase">${s.l}</span>
+                            </div>`).join('')}
+                            ${generateRows(d.ds)}
                         </div>
                     </div>
                 </div>`;
-            await loadBookingStatus(date);
-            showLoading(false);
+            await loadB(date); showLoading(false);
         }
 
-        function generateQuickDates(sel) {
-            let h = ""; for (let i=0; i<7; i++) {
-                let d = new Date(); d.setDate(d.getDate() + i); let iso = d.toISOString().split('T')[0]; let active = iso === sel;
-                h += `<button onclick="changeDate('${iso}')" class="flex-shrink-0 w-12 h-16 flex flex-col items-center justify-center rounded-2xl border transition-all ${active?'bg-blue-600 text-white shadow-lg':'bg-white text-slate-400 border-slate-100'}"><span class="text-[9px] font-black uppercase mb-1">${['CN','T2','T3','T4','T5','T6','T7'][d.getDay()]}</span><span class="text-sm font-black">${d.getDate()}</span></button>`;
-            } return h;
+        function generateRows(courts) {
+            let h = ""; for (let i=5; i<=23; i++) { [":00", ":30"].forEach(m => {
+                let t = i.toString().padStart(2,'0')+m; h += `<div class="grid-cell cell-time">${t}</div>`;
+                courts.forEach((s, idx) => { h += `<div onclick="toggle(this)" class="grid-cell" data-slot="slot_${t.replace(':','')}_${idx}" data-price="${s.g/2}"></div>`; });
+            }); } return h;
         }
 
-        function generateGridRows(courts) {
-            let h = ""; for (let i=5; i<=23; i++) {
-                [":00", ":30"].forEach(m => {
-                    let t = i.toString().padStart(2, '0') + m;
-                    h += `<div class="grid-cell cell-time">${t}</div>`;
-                    courts.forEach((s, idx) => { h += `<div onclick="toggleCell(this)" class="grid-cell" data-slot="slot_${t.replace(':','')}_${idx}" data-price="${s.g/2}"></div>`; });
-                });
-            } return h;
-        }
-
-        function toggleCell(el) {
-            if (el.classList.contains('status-manual-locked')) {
-                document.querySelectorAll(".is-selecting").forEach(c => c.classList.remove("is-selecting"));
-                el.classList.add("is-selecting");
-                document.getElementById("lock-panel").classList.remove("hidden");
-                document.getElementById("txt-duration").innerText = "ĐANG KHÓA";
-                document.getElementById("txt-money").innerText = "Chọn 'MỞ TRỐNG' để hủy đặt";
-                return;
-            }
+        function toggle(el) {
             el.classList.toggle("is-selecting");
             const sel = document.querySelectorAll(".is-selecting"), panel = document.getElementById("lock-panel");
-            if (sel.length > 0) {
+            if(sel.length > 0) {
                 panel.classList.remove("hidden");
-                let m = 0; sel.forEach(c => m += parseFloat(c.dataset.price));
+                let m = 0; sel.forEach(c => m += parseFloat(c.dataset.price || 0));
                 document.getElementById("txt-duration").innerText = (sel.length * 0.5).toFixed(1) + " GIỜ";
                 document.getElementById("txt-money").innerText = fmt(m) + " VNĐ";
-            } else { panel.classList.add("hidden"); }
+            } else panel.classList.add("hidden");
         }
 
         async function actionLock(type) {
@@ -241,82 +163,107 @@
             const sel = document.querySelectorAll(".is-selecting"), date = window.currentDate || new Date().toISOString().split('T')[0];
             const updates = {};
             sel.forEach((el, i) => {
-                if (type === 'empty') updates[el.dataset.slot] = firebase.firestore.FieldValue.delete();
-                else updates[el.dataset.slot] = { s: 'locked', p: el.dataset.price, v: i === 0 ? getRaw(document.getElementById("input-service").value) : 0 };
+                if(type==='empty') updates[el.dataset.slot] = firebase.firestore.FieldValue.delete();
+                else updates[el.dataset.slot] = { s:'locked', p:parseFloat(el.dataset.price), v: i===0?getRaw(document.getElementById("input-service").value):0 };
             });
-            await db.collection("bookings").doc(`${auth.currentUser.uid}_${date}`).set(updates, { merge: true });
+            await db.collection("bookings").doc(`${auth.currentUser.uid}_${date}`).set(updates, {merge:true});
             document.getElementById("lock-panel").classList.add("hidden");
-            document.getElementById("input-service").value = "";
             renderBookingGrid();
-            showLoading(false);
         }
 
-        async function loadBookingStatus(date) {
+        async function loadB(date) {
             const snap = await db.collection("bookings").doc(`${auth.currentUser.uid}_${date}`).get();
             if(!snap.exists) return;
-            const b = snap.data(), courts = window.courtConfig;
+            const b = snap.data(), ds = window.courtConfig;
             Object.keys(b).forEach(k => {
                 const el = document.querySelector(`[data-slot="${k}"]`);
-                if (el && b[k].s === 'locked') {
+                if(el && b[k].s === 'locked') {
                     const idx = k.split('_').pop();
-                    const isCL = courts[idx] && courts[idx].l === 'Cầu lông';
-                    el.className = `grid-cell status-manual-locked ${isCL?'border-emerald-500':'border-blue-500'}`;
-                    el.innerHTML = `<div class="text-center"><span class="text-[7px] font-black block leading-tight">ĐÃ ĐẶT</span>${b[k].v>0?`<span class="text-[6px] text-green-400 font-bold">+${fmt(b[k].v)}</span>`:''}</div>`;
+                    const isCL = ds[idx].l.includes('Cầu');
+                    el.className = `grid-cell ${isCL?'is-cl':'is-pb'}`;
+                    el.innerHTML = `<span class="text-[8px] font-black">${b[k].v > 0 ? '+'+fmt(b[k].v) : '•'}</span>`;
                 }
             });
         }
 
-        async function changeDate(d) { window.currentDate = d; renderBookingGrid(); }
+        function changeDate(d) { window.currentDate = d; renderBookingGrid(); }
 
-        // --- TAB 3: DOANH THU (Biểu đồ + AI Insight v7) ---
+        // --- TAB 3: DOANH THU (BIỂU ĐỒ 7 NGÀY + CHI PHÍ) ---
         async function renderRevenue() {
             showLoading(true);
             const date = window.currentDate || new Date().toISOString().split('T')[0];
             const snap = await db.collection("bookings").doc(`${auth.currentUser.uid}_${date}`).get();
             const courtDoc = await db.collection("courts").doc(auth.currentUser.uid).get();
-            let totalS = 0, totalV = 0, clR = 0, pbR = 0, slots = 0;
+            const expSnap = await db.collection("expenses").doc(`${auth.currentUser.uid}_${date}`).get();
             
-            if (snap.exists && courtDoc.exists) {
-                const b = snap.data(), courts = courtDoc.data().ds;
-                Object.keys(b).forEach(k => { if(b[k].s==='locked'){ const idx=k.split('_').pop(); totalS+=parseFloat(b[k].p); totalV+=parseFloat(b[k].v); slots++; if(courts[idx].l==='Cầu lông') clR+=parseFloat(b[k].p); else pbR+=parseFloat(b[k].p); }});
+            let totalS=0, totalV=0, clR=0, pbR=0, expV = expSnap.exists ? expSnap.data().v : 0;
+            if(snap.exists && courtDoc.exists) {
+                const b = snap.data(), ds = courtDoc.data().ds;
+                Object.keys(b).forEach(k => {
+                    if(b[k].s==='locked') {
+                        const idx = k.split('_').pop();
+                        totalS += b[k].p; totalV += b[k].v;
+                        if(ds[idx].l.includes('Cầu')) clR += b[k].p; else pbR += b[k].p;
+                    }
+                });
             }
 
             document.getElementById("main-content").innerHTML = `
-                <div class="space-y-6 animate-fadeIn">
-                    <div class="bg-slate-900 p-8 rounded-[3rem] text-white shadow-2xl relative overflow-hidden">
-                        <div class="flex justify-between items-start relative z-10">
-                            <div><p class="text-[10px] opacity-50 font-black uppercase italic tracking-widest">Doanh thu tổng ngày</p><h2 class="text-4xl font-black text-blue-400 mt-1">${fmt(totalS+totalV)}đ</h2></div>
-                            <input type="date" value="${date}" onchange="changeDateRev(this.value)" class="bg-white/10 text-xs p-3 rounded-2xl outline-none font-bold">
+                <div class="space-y-6">
+                    <div class="bg-slate-900 p-8 rounded-[3rem] text-white shadow-xl">
+                        <div class="flex justify-between items-center mb-6">
+                            <div><p class="text-[10px] opacity-50 font-black uppercase tracking-widest">Lợi nhuận ngày ${date}</p>
+                            <h2 class="text-4xl font-black text-blue-400">${fmt(totalS + totalV - expV)}đ</h2></div>
+                            <input type="date" value="${date}" onchange="changeDateRev(this.value)" class="bg-white/10 p-2 rounded-xl text-xs">
                         </div>
-                        <div class="grid grid-cols-2 gap-4 mt-8 relative z-10">
-                            <div class="bg-white/5 border border-white/5 p-5 rounded-3xl backdrop-blur-sm"><p class="text-[9px] opacity-40 font-black uppercase mb-1">Tiền sân</p><p class="font-black text-lg">${fmt(totalS)}đ</p></div>
-                            <div class="bg-white/5 border border-white/5 p-5 rounded-3xl backdrop-blur-sm"><p class="text-[9px] opacity-40 font-black uppercase mb-1">Dịch vụ</p><p class="font-black text-lg text-green-400">+${fmt(totalV)}đ</p></div>
+                        <div class="grid grid-cols-3 gap-2">
+                            <div class="bg-white/5 p-3 rounded-2xl text-center"><p class="text-[8px] opacity-40 uppercase">Tiền sân</p><p class="font-bold text-xs">${fmt(totalS)}</p></div>
+                            <div class="bg-white/5 p-3 rounded-2xl text-center"><p class="text-[8px] opacity-40 uppercase">Dịch vụ</p><p class="font-bold text-xs text-green-400">+${fmt(totalV)}</p></div>
+                            <div class="bg-white/5 p-3 rounded-2xl text-center"><p class="text-[8px] opacity-40 uppercase">Chi phí</p><p class="font-bold text-xs text-red-400">-${fmt(expV)}</p></div>
                         </div>
                     </div>
 
-                    <div class="bg-white p-6 rounded-[2.5rem] shadow-sm">
-                        <h3 class="font-black text-xs text-slate-400 mb-6 uppercase italic tracking-widest">Phân tích kinh doanh AI</h3>
-                        <div class="flex flex-col md:flex-row gap-8 items-center">
-                            <div class="w-full max-w-[200px]"><canvas id="revChart"></canvas></div>
-                            <div class="flex-1 space-y-4">
-                                <div class="bg-blue-50 p-5 rounded-3xl border border-blue-100 italic">
-                                    <p class="text-[11px] font-black text-blue-600 mb-2 uppercase tracking-tighter">💡 RankSport Insights:</p>
-                                    <p class="text-[11px] text-blue-900 leading-relaxed font-bold">
-                                        Hôm nay công suất đạt ${Math.round((slots/((courtDoc.data()?.ds.length||1)*38))*100)}%. 
-                                        ${clR > pbR ? 'Môn Cầu lông đang mang lại thu nhập chính, hãy ưu tiên các chương trình khuyến mãi cho Pickleball.' : 'Pickleball đang bùng nổ, hãy xem xét tăng giá vào các khung giờ vàng.'}
-                                    </p>
-                                </div>
-                            </div>
+                    <div class="bg-white p-6 rounded-3xl shadow-sm border-t-8 border-red-500">
+                        <h3 class="font-black text-xs uppercase mb-4 italic">Nhập chi phí ngày (Điện, nước, nv...)</h3>
+                        <div class="flex gap-2">
+                            <input id="exp-v" oninput="formatCurrency(this)" value="${fmt(expV)}" class="flex-1 p-4 bg-slate-50 rounded-2xl font-bold shadow-inner" placeholder="Số tiền chi...">
+                            <button onclick="saveExp()" class="bg-red-500 text-white px-6 rounded-2xl font-black text-xs">LƯU CHI</button>
                         </div>
+                    </div>
+
+                    <div class="bg-white p-6 rounded-3xl shadow-sm">
+                        <h3 class="font-black text-xs uppercase mb-4 italic">Xu hướng doanh thu 7 ngày</h3>
+                        <canvas id="weeklyChart" height="200"></canvas>
                     </div>
                 </div>`;
             
-            new Chart(document.getElementById('revChart'), {
-                type: 'doughnut',
-                data: { labels: ['Cầu lông', 'Pickleball'], datasets: [{ data: [clR, pbR], backgroundColor: ['#10b981', '#3b82f6'], borderWeight: 0 }] },
-                options: { plugins: { legend: { position: 'bottom', labels: { font: { size: 10, weight: 'bold' } } } } }
-            });
+            await drawWeekly(date);
             showLoading(false);
+        }
+
+        async function saveExp() {
+            const v = getRaw(document.getElementById("exp-v").value);
+            const date = window.currentDate || new Date().toISOString().split('T')[0];
+            await db.collection("expenses").doc(`${auth.currentUser.uid}_${date}`).set({ v });
+            renderRevenue();
+        }
+
+        async function drawWeekly(current) {
+            let labels = [], data = [];
+            for(let i=6; i>=0; i--) {
+                let d = new Date(current); d.setDate(d.getDate() - i);
+                let iso = d.toISOString().split('T')[0];
+                labels.push(d.getDate()+'/'+(d.getMonth()+1));
+                const snap = await db.collection("bookings").doc(`${auth.currentUser.uid}_${iso}`).get();
+                let dayTotal = 0;
+                if(snap.exists) { Object.values(snap.data()).forEach(v => { if(v.s==='locked') dayTotal += (v.p + v.v); }); }
+                data.push(dayTotal);
+            }
+            new Chart(document.getElementById('weeklyChart'), {
+                type: 'bar',
+                data: { labels, datasets: [{ label:'Doanh thu', data, backgroundColor:'#3b82f6', borderRadius:10 }] },
+                options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { font: { size: 8 } } }, x: { ticks: { font: { size: 8, weight:'bold' } } } } }
+            });
         }
         function changeDateRev(d) { window.currentDate = d; renderRevenue(); }
     </script>
