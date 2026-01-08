@@ -2,7 +2,7 @@
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
-    <title>RankSport - Fix Dứt Điểm Lỗi Undefined</title>
+    <title>RankSport - Module 5: Chủ Sân Linh Hoạt</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
@@ -14,8 +14,8 @@
         .sport-font { font-family: 'Oswald', sans-serif; text-transform: uppercase; }
         body { font-family: 'Inter', sans-serif; background-color: #0f172a; color: white; }
         .glass-card { background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.1); }
-        .text-lime { color: #a3e635; }
-        .border-lime { border-color: #a3e635; }
+        input, textarea { background: rgba(255,255,255,0.08) !important; border: 1px solid rgba(255,255,255,0.1) !important; color: white !important; }
+        input:focus, textarea:focus { border-color: #3b82f6 !important; outline: none; }
     </style>
 </head>
 <body class="pb-24">
@@ -24,15 +24,7 @@
         <div class="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-lime-400"></div>
     </div>
 
-    <div id="login-screen" class="min-h-screen hidden flex flex-col justify-center items-center px-6">
-        <h1 class="text-6xl sport-font italic text-lime-400 font-bold">RANK<span class="text-white">SPORT</span></h1>
-        <button id="btn-login" class="mt-12 w-full max-w-xs bg-white text-black font-bold py-4 px-6 rounded-full flex items-center justify-center gap-3 shadow-xl hover:scale-105 transition-transform">
-            <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="20" alt="google">
-            ĐĂNG NHẬP VỚI GOOGLE
-        </button>
-    </div>
-
-    <div id="app" class="hidden">
+    <div id="app">
         <header class="bg-slate-900 border-b border-slate-800 p-4 flex justify-between items-center sticky top-0 z-40">
             <span class="sport-font text-xl text-lime-400 italic font-bold">RANK<span class="text-white">S</span></span>
             <div class="flex items-center gap-3">
@@ -41,23 +33,8 @@
             </div>
         </header>
 
-        <div id="role-screen" class="hidden p-8 flex flex-col items-center justify-center min-h-[70vh]">
-            <h2 class="text-2xl sport-font italic mb-8">BẠN LÀ AI?</h2>
-            <div class="grid grid-cols-1 gap-4 w-full max-w-sm">
-                <button onclick="chonVaiTro('player')" class="glass-card p-6 rounded-xl border hover:border-lime-400 transition-all text-center">
-                    <div class="text-3xl mb-1">👟</div>
-                    <div class="sport-font text-xl text-lime-400 font-bold">VẬN ĐỘNG VIÊN</div>
-                </button>
-                <button onclick="chonVaiTro('owner')" class="glass-card p-6 rounded-xl border hover:border-blue-400 transition-all text-center">
-                    <div class="text-3xl mb-1">🏟️</div>
-                    <div class="sport-font text-xl text-blue-400 font-bold">CHỦ SÂN</div>
-                </button>
-            </div>
-        </div>
-
-        <main id="main-content" class="p-6"></main>
-
-        <nav id="bottom-nav" class="fixed bottom-0 left-0 right-0 bg-slate-900/95 backdrop-blur-md border-t border-slate-800 flex justify-around p-3 shadow-2xl hidden"></nav>
+        <main id="main-content" class="p-4"></main>
+        <nav id="bottom-nav" class="fixed bottom-0 left-0 right-0 bg-slate-900/95 backdrop-blur-md border-t border-slate-800 flex justify-around p-3 shadow-2xl"></nav>
     </div>
 
     <script>
@@ -74,101 +51,102 @@
         const db = firebase.firestore();
         const provider = new firebase.auth.GoogleAuthProvider();
 
-        function hienLoading(bat) {
-            document.getElementById("loading").classList.toggle("hidden", !bat);
-        }
-
-        document.getElementById("btn-login").onclick = () => {
-            hienLoading(true);
-            auth.signInWithPopup(provider).catch(err => { hienLoading(false); alert(err.message); });
-        };
-
+        function hienLoading(bat) { document.getElementById("loading").classList.toggle("hidden", !bat); }
         document.getElementById("btn-logout").onclick = () => auth.signOut();
 
         auth.onAuthStateChanged(async (user) => {
-            hienLoading(true);
-            if (!user) {
-                document.getElementById("login-screen").classList.remove("hidden");
-                document.getElementById("app").classList.add("hidden");
-                hienLoading(false);
-                return;
-            }
-
-            document.getElementById("login-screen").classList.add("hidden");
-            document.getElementById("app").classList.remove("hidden");
+            if (!user) { window.location.reload(); return; }
             document.getElementById("user-name").innerText = user.displayName;
-
-            try {
-                const userDoc = await db.collection("users").doc(user.uid).get();
-                if (!userDoc.exists) {
-                    document.getElementById("role-screen").classList.remove("hidden");
-                    document.getElementById("bottom-nav").classList.add("hidden");
-                    document.getElementById("main-content").innerHTML = "";
-                } else {
-                    const data = userDoc.data();
-                    document.getElementById("role-screen").classList.add("hidden");
-                    setupNavigation(data.vaiTro);
-                }
-            } catch (e) {
-                console.error(e);
-            } finally {
-                hienLoading(false);
-            }
+            const userDoc = await db.collection("users").doc(user.uid).get();
+            if (userDoc.exists) setupNavigation(userDoc.data().vaiTro);
         });
-
-        async function chonVaiTro(vTro) {
-            hienLoading(true);
-            const user = auth.currentUser;
-            const duLieu = {
-                uid: user.uid, ten: user.displayName, email: user.email,
-                vaiTro: vTro, taoLuc: firebase.firestore.FieldValue.serverTimestamp()
-            };
-            try {
-                await db.collection("users").doc(user.uid).set(duLieu);
-                // Sau khi set thành công, xóa màn hình chọn và nạp nav ngay
-                document.getElementById("role-screen").classList.add("hidden");
-                setupNavigation(vTro);
-            } catch (e) { 
-                alert("Lỗi: " + e.message); 
-            } finally { 
-                hienLoading(false); 
-            }
-        }
 
         function setupNavigation(vaiTro) {
             const nav = document.getElementById("bottom-nav");
-            const main = document.getElementById("main-content");
-            
-            // Hiện thanh điều hướng
-            nav.classList.remove("hidden");
-            nav.innerHTML = "";
-
             const tabs = vaiTro === 'player' 
-                ? [ {n: 'SÀN ĐẤU', i: '🏟️'}, {n: 'XẾP HẠNG', i: '🏆'}, {n: 'CÁ NHÂN', i: '👤'} ]
-                : [ {n: 'SÂN BÃI', i: '📊'}, {n: 'LỊCH ĐẶT', i: '📅'}, {n: 'VÍ TIỀN', i: '💰'} ];
+                ? [ {n: 'SÀN ĐẤU', i: '🏟️', f: () => {}}, {n: 'XẾP HẠNG', i: '🏆', f: () => {}}, {n: 'HỒ SƠ', i: '👤', f: () => {}} ]
+                : [ {n: 'QUẢN LÝ', i: '📊', f: renderOwnerCourts}, {n: 'LỊCH ĐẶT', i: '📅', f: () => {}}, {n: 'CÀI ĐẶT', i: '⚙️', f: () => {}} ];
 
+            nav.innerHTML = "";
             tabs.forEach((tab, index) => {
                 const btn = document.createElement('button');
-                btn.className = `flex flex-col items-center gap-1 text-[10px] sport-font font-bold ${index === 0 ? 'text-lime-400' : 'text-gray-500'}`;
+                btn.className = `flex flex-col items-center gap-1 text-[9px] sport-font font-bold ${index === 0 ? 'text-blue-400' : 'text-gray-500'}`;
                 btn.innerHTML = `<span class="text-2xl">${tab.i}</span>${tab.n}`;
                 btn.onclick = () => {
-                    document.querySelectorAll('#bottom-nav button').forEach(b => b.classList.replace('text-lime-400', 'text-gray-500'));
-                    btn.classList.replace('text-gray-500', 'text-lime-400');
-                    main.innerHTML = `<div class="glass-card p-10 rounded-xl text-center"><h2 class="sport-font text-xl italic text-lime-400 font-bold">ĐANG TẢI ${tab.n}...</h2></div>`;
+                    document.querySelectorAll('#bottom-nav button').forEach(b => b.classList.replace('text-blue-400', 'text-gray-500'));
+                    btn.classList.replace('text-gray-500', 'text-blue-400');
+                    tab.f();
                 };
                 nav.appendChild(btn);
             });
+            tabs[0].f();
+        }
 
-            // Giao diện chào mừng dứt điểm lỗi Undefined
-            const tenVaiTro = vaiTro === 'player' ? 'VẬN ĐỘNG VIÊN' : 'CHỦ SÂN';
+        // --- GIAO DIỆN QUẢN LÝ SÂN TỰ NHẬP ---
+        async function renderOwnerCourts() {
+            hienLoading(true);
+            const main = document.getElementById("main-content");
+            const user = auth.currentUser;
+            const courtDoc = await db.collection("courts").doc(user.uid).get();
+            const d = courtDoc.exists ? courtDoc.data() : { ten: "", dc: "", gia: "", dv: "", qr: "" };
+            hienLoading(false);
+
             main.innerHTML = `
-                <div class="glass-card p-8 rounded-2xl border-2 border-lime-400/50 text-center animate-pulse">
-                    <h2 class="sport-font text-3xl text-lime-400 italic font-bold">XÁC THỰC OK</h2>
-                    <p class="text-white font-bold mt-2 uppercase tracking-[0.2em] text-sm">${tenVaiTro}</p>
-                    <div class="h-[1px] bg-slate-800 my-6 w-full"></div>
-                    <p class="text-[11px] text-gray-400 leading-relaxed italic">Hệ thống đã nhận diện chính xác vai trò của bạn. Hãy sử dụng Menu phía dưới để khám phá.</p>
+                <div class="glass-card p-6 rounded-2xl border border-blue-400/20">
+                    <h2 class="sport-font text-xl text-blue-400 mb-6 italic tracking-widest">Thiết lập dịch vụ sân</h2>
+                    
+                    <div class="space-y-5">
+                        <div class="group">
+                            <label class="text-[10px] text-gray-500 uppercase font-bold ml-1">Tên cụm sân / Tên sân</label>
+                            <input id="in-ten" type="text" value="${d.ten}" class="w-full p-4 rounded-xl mt-1 transition-all" placeholder="VD: Cầu Lông Pro - Sân A1">
+                        </div>
+
+                        <div>
+                            <label class="text-[10px] text-gray-500 uppercase font-bold ml-1">Vị trí / Địa chỉ</label>
+                            <input id="in-dc" type="text" value="${d.dc}" class="w-full p-4 rounded-xl mt-1" placeholder="Số nhà, tên đường, quận...">
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="text-[10px] text-gray-500 uppercase font-bold ml-1">Giá thuê (VND/h)</label>
+                                <input id="in-gia" type="text" value="${d.gia}" class="w-full p-4 rounded-xl mt-1" placeholder="VD: 80.000">
+                            </div>
+                            <div>
+                                <label class="text-[10px] text-gray-500 uppercase font-bold ml-1">Link QR nhận tiền</label>
+                                <input id="in-qr" type="text" value="${d.qr}" class="w-full p-4 rounded-xl mt-1" placeholder="Dán link ảnh QR">
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="text-[10px] text-gray-500 uppercase font-bold ml-1">Mô tả dịch vụ & Tiện ích</label>
+                            <textarea id="in-dv" rows="3" class="w-full p-4 rounded-xl mt-1 transition-all" placeholder="VD: Có thảm xanh, đèn led chống chói, trà đá miễn phí...">${d.dv}</textarea>
+                        </div>
+
+                        <button onclick="luuData()" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-5 rounded-2xl shadow-2xl transition-all transform active:scale-95 sport-font tracking-widest mt-4">
+                            XÁC NHẬN CẬP NHẬT
+                        </button>
+                    </div>
                 </div>
             `;
+        }
+
+        async function luuData() {
+            hienLoading(true);
+            const user = auth.currentUser;
+            const data = {
+                ownerId: user.uid,
+                ten: document.getElementById("in-ten").value,
+                dc: document.getElementById("in-dc").value,
+                gia: document.getElementById("in-gia").value,
+                dv: document.getElementById("in-dv").value,
+                qr: document.getElementById("in-qr").value,
+                update: firebase.firestore.FieldValue.serverTimestamp()
+            };
+            try {
+                await db.collection("courts").doc(user.uid).set(data);
+                alert("Đã lưu cấu hình sân của bạn!");
+            } catch (e) { alert(e.message); }
+            finally { hienLoading(false); }
         }
     </script>
 </body>
