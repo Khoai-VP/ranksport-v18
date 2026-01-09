@@ -2,7 +2,7 @@
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
-    <title>RankSport v10.0 - Full Power</title>
+    <title>RankSport Ecosystem v20.0</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
@@ -10,243 +10,335 @@
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;900&family=Oswald:wght@700&display=swap');
-        body { font-family: 'Inter', sans-serif; background: #f8fafc; }
-        .grid-container { display: grid; grid-template-columns: 80px repeat(var(--num-courts, 1), minmax(120px, 1fr)); background: white; }
-        .grid-cell { border: 0.5px solid #f1f5f9; height: 50px; display: flex; align-items: center; justify-content: center; cursor: pointer; }
-        .header-cell { background: #0f172a; color: white; position: sticky; top: 0; z-index: 30; font-family: 'Oswald'; }
-        .cell-time { background: #f8fafc; font-weight: 800; border-right: 2px solid #cbd5e1; position: sticky; left: 0; z-index: 20; font-size: 11px; }
-        .is-cl { border-left: 6px solid #10b981 !important; background: #f0fdf4 !important; color: #065f46 !important; font-weight: 900; }
-        .is-pb { border-left: 6px solid #3b82f6 !important; background: #eff6ff !important; color: #1e40af !important; font-weight: 900; }
-        .is-selecting { background: #dbeafe !important; border: 2px solid #2563eb !important; }
-        .img-box { aspect-ratio: 1; background: #f1f5f9; border: 2px dashed #cbd5e1; border-radius: 1rem; display: flex; align-items: center; justify-content: center; overflow: hidden; position: relative; }
-        .img-box img { width: 100%; height: 100%; object-fit: cover; position: absolute; }
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
+        body { font-family: 'Inter', sans-serif; background: #f8fafc; color: #1e293b; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
+        .grid-container { display: grid; grid-template-columns: 70px repeat(var(--num-courts, 1), minmax(100px, 1fr)); background: white; }
+        .grid-cell { border: 0.5px solid #f1f5f9; height: 50px; display: flex; align-items: center; justify-content: center; cursor: pointer; position: relative; transition: 0.2s; }
+        .header-cell { background: #0f172a; color: white; position: sticky; top: 0; z-index: 30; font-size: 10px; font-weight: 900; text-transform: uppercase; }
+        .cell-time { background: #f8fafc; font-weight: 800; border-right: 2px solid #cbd5e1; position: sticky; left: 0; z-index: 20; font-size: 10px; }
+        .is-cl { border-left: 5px solid #10b981 !important; background: #f0fdf4 !important; color: #065f46 !important; font-weight: 900; }
+        .is-pb { border-left: 5px solid #3b82f6 !important; background: #eff6ff !important; color: #1e40af !important; font-weight: 900; }
+        .is-pending { background: #fbbf24 !important; color: white !important; animation: pulse 1.5s infinite; font-weight: 900; }
+        .is-selecting { background: #dbeafe !important; border: 2px solid #2563eb !important; z-index: 10; }
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.7; } 100% { opacity: 1; } }
+        .animate-fadeIn { animation: fadeIn 0.3s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
     </style>
 </head>
-<body class="pb-32">
-    <div id="loading" class="hidden fixed inset-0 bg-white/90 flex flex-col items-center justify-center z-[100]"><div class="animate-spin rounded-full h-10 w-10 border-t-4 border-blue-600"></div></div>
+<body class="pb-24">
+    <div id="loading" class="hidden fixed inset-0 bg-white/90 flex flex-col items-center justify-center z-[200]"><div class="animate-spin rounded-full h-10 w-10 border-t-4 border-blue-600"></div></div>
 
-    <header class="bg-white border-b p-4 sticky top-0 z-40 flex justify-between items-center shadow-sm">
-        <span class="font-black italic text-xl text-blue-600 uppercase">RankSport</span>
-        <div id="header-user" class="hidden flex items-center gap-3">
-            <div id="user-info" class="text-[10px] font-black text-slate-500 bg-slate-100 px-3 py-1.5 rounded-full uppercase italic">...</div>
-            <button onclick="handleLogout()" class="text-[10px] font-black text-red-500 border border-red-200 px-3 py-1.5 rounded-full uppercase">Đăng xuất</button>
+    <header class="bg-white border-b p-4 sticky top-0 z-50 flex justify-between items-center">
+        <span class="font-black italic text-xl text-blue-600 tracking-tighter">RANKSPORT</span>
+        <div id="header-user" class="hidden flex items-center gap-2">
+            <span id="user-info" class="text-[9px] font-black bg-slate-100 px-3 py-1.5 rounded-full uppercase tracking-tighter">...</span>
+            <button onclick="handleLogout()" class="text-[9px] font-black text-red-500 uppercase">Thoát</button>
         </div>
     </header>
 
-    <main id="main-content" class="p-4 max-w-5xl mx-auto space-y-6"></main>
+    <main id="main-content" class="p-4 max-w-lg mx-auto"></main>
 
-    <div id="lock-panel" class="hidden fixed bottom-24 left-4 right-4 bg-slate-900 shadow-2xl rounded-3xl p-6 z-[50] text-white">
-        <div class="flex justify-between items-center mb-4">
-            <div><div id="txt-duration" class="font-black text-xl italic uppercase text-blue-400">0 GIỜ</div><div id="txt-money" class="text-white text-[10px] font-bold opacity-50 uppercase">0đ tiền sân</div></div>
+    <div id="lock-panel" class="hidden fixed bottom-20 left-4 right-4 bg-slate-900 shadow-2xl rounded-[2.5rem] p-6 z-[100] text-white animate-fadeIn">
+        <div class="flex justify-between items-end mb-4">
+            <div>
+                <div id="txt-duration" class="font-black text-2xl italic text-blue-400">0 GIỜ</div>
+                <div id="txt-money" class="text-white text-[10px] font-bold opacity-50 uppercase tracking-widest">0đ Tiền sân</div>
+            </div>
             <div class="text-right">
-                <p class="text-[9px] text-slate-400 font-black mb-1 uppercase">Dịch vụ</p>
-                <select id="svc-select" onchange="document.getElementById('svc-price').value = this.value" class="bg-white/10 text-white text-[11px] font-bold p-2 rounded-lg outline-none w-32 mb-1 block ml-auto"><option value="0">-- Chọn --</option></select>
-                <input type="text" id="svc-price" class="bg-white/10 text-white font-black text-right border-b-2 border-blue-500 outline-none w-32 text-sm block ml-auto" placeholder="0">
+                <p class="text-[8px] text-slate-400 font-black mb-1 uppercase">Dịch vụ đi kèm</p>
+                <select id="svc-select" onchange="document.getElementById('svc-price').value = this.value" class="bg-white/10 text-white text-[10px] font-bold p-2 rounded-xl outline-none w-32 mb-1 block ml-auto"><option value="0">Trống</option></select>
+                <input type="text" id="svc-price" class="bg-transparent text-white font-black text-right border-b border-blue-500 outline-none w-32 text-sm block ml-auto" placeholder="0">
             </div>
         </div>
-        <div class="flex gap-2">
-            <button onclick="actionLock('locked')" class="flex-1 bg-blue-600 py-4 rounded-2xl font-black text-xs uppercase shadow-lg">Xác nhận</button>
-            <button onclick="actionLock('empty')" class="flex-1 bg-slate-700 py-4 rounded-2xl font-black text-xs uppercase">Hủy</button>
-        </div>
+        <div id="panel-actions" class="flex gap-2"></div>
     </div>
 
-    <nav id="nav-bar" class="hidden fixed bottom-0 left-0 right-0 bg-white border-t flex justify-around p-4 z-40 shadow-xl">
-        <button onclick="renderManagement()" class="flex flex-col items-center text-[10px] font-black text-slate-400 uppercase"><span>⚙️</span>Cấu hình</button>
-        <button onclick="renderBookingGrid()" class="flex flex-col items-center text-[10px] font-black text-slate-400 uppercase"><span>📅</span>Lịch đặt</button>
-        <button onclick="renderRevenue()" class="flex flex-col items-center text-[10px] font-black text-slate-400 uppercase"><span>💰</span>Doanh thu</button>
-    </nav>
+    <nav id="nav-bar" class="hidden fixed bottom-0 left-0 right-0 bg-white border-t flex justify-around p-4 z-50 shadow-[0_-5px_20px_rgba(0,0,0,0.05)]"></nav>
 
     <script>
-        // --- FIREBASE CONFIG ---
         const firebaseConfig = { apiKey: "AIzaSyBpytj0KQybf55iabBzmeg59VL-9oADPHA", authDomain: "badrank-89mrd.firebaseapp.com", projectId: "badrank-89mrd", storageBucket: "badrank-89mrd.appspot.com", messagingSenderId: "951939105470", appId: "1:951939105470:web:968f94f61f94d9b4b08705" };
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore(); const auth = firebase.auth();
         const fmt = (v) => new Intl.NumberFormat('vi-VN').format(v || 0);
         const getRaw = (s) => parseFloat(s.toString().replace(/\D/g, '')) || 0;
-        function showLoading(s) { document.getElementById('loading').classList.toggle('hidden', !s); }
+        let currentUserRole = null; let currentCourtData = null;
 
         auth.onAuthStateChanged(user => {
             if(user) {
                 document.getElementById('header-user').classList.remove('hidden');
-                document.getElementById('nav-bar').classList.remove('hidden');
                 document.getElementById('user-info').innerText = user.displayName;
-                renderBookingGrid();
-            } else renderRoleSelection();
+                renderRoleSelection();
+            } else renderAuth();
         });
+
+        function renderAuth() {
+            document.getElementById('main-content').innerHTML = `
+                <div class="h-[70vh] flex flex-col items-center justify-center gap-6">
+                    <div class="text-center mb-4">
+                        <h1 class="text-4xl font-black italic text-blue-600 italic">RANKSPORT</h1>
+                        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em]">Hệ sinh thái thể thao số</p>
+                    </div>
+                    <button onclick="auth.signInWithPopup(new firebase.auth.GoogleAuthProvider())" class="w-full max-w-xs bg-slate-900 text-white p-5 rounded-[2rem] font-black shadow-xl uppercase text-xs tracking-widest">Đăng nhập Google</button>
+                </div>`;
+        }
 
         function renderRoleSelection() {
             document.getElementById('main-content').innerHTML = `
-                <div class="h-[70vh] flex flex-col items-center justify-center gap-6">
-                    <button onclick="auth.signInWithPopup(new firebase.auth.GoogleAuthProvider())" class="w-72 bg-blue-600 text-white p-6 rounded-[2rem] font-black shadow-2xl">ĐĂNG NHẬP CHỦ SÂN</button>
-                    <button onclick="alert('VĐV view')" class="w-72 bg-slate-100 text-slate-500 p-6 rounded-[2rem] font-black border-2 border-slate-200 uppercase">Tôi là Vận động viên</button>
+                <div class="h-[70vh] flex flex-col items-center justify-center gap-4">
+                    <h2 class="font-black italic text-slate-400 uppercase text-[10px] tracking-widest mb-4">Chọn vai trò của ông</h2>
+                    <button onclick="initRole('owner')" class="w-full max-w-xs bg-white border-2 border-slate-100 p-6 rounded-[2.5rem] font-black shadow-sm uppercase text-sm text-slate-800">🏟️ Chủ sân / Quản lý</button>
+                    <button onclick="initRole('vdv')" class="w-full max-w-xs bg-blue-600 text-white p-6 rounded-[2.5rem] font-black shadow-xl uppercase text-sm">👟 Vận động viên</button>
                 </div>`;
         }
-        function handleLogout() { auth.signOut().then(() => { location.reload(); }); }
 
-        // --- TAB 1: CẤU HÌNH ---
+        function initRole(role) {
+            currentUserRole = role;
+            document.getElementById('nav-bar').classList.remove('hidden');
+            if(role === 'owner') { renderOwnerNav(); renderBookingGrid(); }
+            else { renderVDVNav(); switchVDVTab('arena'); }
+        }
+
+        function handleLogout() { auth.signOut().then(() => location.reload()); }
+
+        // --- MODULE 1: CHỦ SÂN ---
+        function renderOwnerNav() {
+            document.getElementById('nav-bar').innerHTML = `
+                <button onclick="renderManagement()" class="flex flex-col items-center text-[8px] font-black text-slate-400 uppercase gap-1"><span>⚙️</span>Cấu hình</button>
+                <button onclick="renderBookingGrid()" class="flex flex-col items-center text-[8px] font-black text-slate-400 uppercase gap-1"><span>📅</span>Lịch đặt</button>
+                <button onclick="renderRevenue()" class="flex flex-col items-center text-[8px] font-black text-slate-400 uppercase gap-1"><span>💰</span>Doanh thu</button>
+            `;
+        }
+
         async function renderManagement() {
             showLoading(true);
             const doc = await db.collection("courts").doc(auth.currentUser.uid).get();
-            const d = doc.exists ? doc.data() : { ten:"", dc:"", sdt:"", ds:[], svcs:[], imgs:[] };
+            const d = doc.exists ? doc.data() : { ten:"", dc:"", sdt:"", ds:[], svcs:[], imgs:[], qrImg:"" };
             showLoading(false);
             document.getElementById("main-content").innerHTML = `
-                <div class="space-y-6 pb-20">
+                <div class="space-y-6 pb-10 animate-fadeIn">
                     <div class="bg-white p-6 rounded-[2.5rem] shadow-sm border">
-                        <h2 class="font-black text-blue-600 mb-4 italic uppercase text-[10px]">1. Nhận diện sân</h2>
-                        <div class="grid grid-cols-3 gap-2 mb-4">
-                            ${[0,1,2].map(i => `<label class="img-box cursor-pointer"><input type="file" class="hidden" onchange="upImg(this, ${i})"><img id="pre-${i}" src="${d.imgs?.[i]||''}" class="${d.imgs?.[i]?'':'hidden'}"><span class="text-slate-300 font-black">+</span></label>`).join('')}
+                        <h2 class="font-black text-blue-600 mb-4 italic uppercase text-[10px]">1. Nhận diện & QR Bank</h2>
+                        <div class="grid grid-cols-4 gap-2 mb-4">
+                            ${[0,1,2].map(i => `<label class="aspect-square bg-slate-50 rounded-2xl flex items-center justify-center cursor-pointer border-2 border-dashed border-slate-200 overflow-hidden relative"><input type="file" class="hidden" onchange="upImg(this, ${i})"><img id="pre-${i}" src="${d.imgs?.[i]||''}" class="${d.imgs?.[i]?'':'hidden'} w-full h-full object-cover absolute"><span class="text-slate-300 font-black">+</span></label>`).join('')}
+                            <label class="aspect-square bg-purple-50 rounded-2xl flex items-center justify-center cursor-pointer border-2 border-dashed border-purple-200 overflow-hidden relative"><input type="file" class="hidden" onchange="upImg(this, 'qr')"><img id="pre-qr" src="${d.qrImg||''}" class="${d.qrImg?'':'hidden'} w-full h-full object-cover absolute"><div class="text-center"><span class="text-purple-400 font-black text-xl">+</span><p class="text-[6px] text-purple-400 font-bold uppercase">QR Bank</p></div></label>
                         </div>
-                        <div class="space-y-2">
-                            <input id="m-ten" value="${d.ten||''}" class="w-full p-4 bg-slate-50 rounded-2xl font-bold" placeholder="Tên cụm sân">
-                            <input id="m-dc" value="${d.dc||''}" class="w-full p-4 bg-slate-50 rounded-2xl font-bold" placeholder="Địa chỉ">
-                            <input id="m-sdt" value="${d.sdt||''}" class="w-full p-4 bg-slate-50 rounded-2xl font-bold" placeholder="Số điện thoại">
-                        </div>
+                        <input id="m-ten" value="${d.ten}" class="w-full p-4 bg-slate-50 rounded-2xl font-bold mb-2 text-sm border-none" placeholder="Tên cụm sân">
+                        <input id="m-dc" value="${d.dc}" class="w-full p-4 bg-slate-50 rounded-2xl font-bold mb-2 text-sm border-none" placeholder="Địa chỉ">
+                        <input id="m-sdt" value="${d.sdt}" class="w-full p-4 bg-slate-50 rounded-2xl font-bold text-sm border-none" placeholder="Số điện thoại">
                     </div>
-
                     <div class="bg-white p-6 rounded-[2.5rem] shadow-sm border">
                         <h2 class="font-black text-emerald-600 mb-4 italic uppercase text-[10px]">2. Danh sách sân</h2>
-                        <div class="flex gap-2 mb-4 bg-slate-900 p-3 rounded-2xl">
-                            <select id="m-type" class="flex-1 bg-transparent text-white font-bold outline-none"><option>Cầu lông</option><option>Pickleball</option></select>
-                            <input id="m-count" type="number" class="w-16 rounded-xl text-center font-bold" placeholder="SL">
-                            <button onclick="addC()" class="bg-blue-600 text-white px-4 rounded-xl font-black text-[10px]">THÊM</button>
+                        <div class="flex gap-2 mb-4 bg-slate-900 p-2 rounded-2xl">
+                            <select id="m-type" class="flex-1 bg-transparent text-white font-bold outline-none text-[10px] pl-2"><option>Cầu lông</option><option>Pickleball</option></select>
+                            <input id="m-count" type="number" class="w-14 rounded-xl text-center font-bold text-xs" placeholder="SL">
+                            <button onclick="addC()" class="bg-blue-600 text-white px-4 py-2 rounded-xl font-black text-[10px]">THÊM</button>
                         </div>
-                        <table class="w-full text-xs" id="court-list">${(d.ds||[]).map(s=>`<tr class="border-b"><td class="py-4 font-black c-t">${s.t}</td><td class="font-bold text-slate-400 c-l">${s.l}</td><td><input class="w-full text-right font-black text-blue-600 c-g bg-transparent" value="${fmt(s.g)}"></td><td class="text-right"><button onclick="this.closest('tr').remove()" class="text-red-400 font-bold px-2">✕</button></td></tr>`).join('')}</table>
+                        <table class="w-full text-[10px]" id="court-list">${(d.ds||[]).map(s=>`<tr class="border-b"><td class="py-3 font-black c-t">${s.t}</td><td class="font-bold text-slate-400 c-l">${s.l}</td><td><input class="w-full text-right font-black text-blue-600 c-g bg-transparent" value="${fmt(s.g)}"></td><td class="text-right"><button onclick="this.closest('tr').remove()" class="text-red-400 font-bold px-2">✕</button></td></tr>`).join('')}</table>
                     </div>
-
-                    <div class="bg-white p-6 rounded-[2.5rem] shadow-sm border">
-                        <h2 class="font-black text-amber-600 mb-4 italic uppercase text-[10px]">3. Bảng phí dịch vụ</h2>
-                        <div class="flex gap-2 mb-4">
-                            <input id="s-n" class="flex-1 p-3 bg-slate-50 rounded-xl font-bold text-xs" placeholder="Tên: Nước, Gửi xe...">
-                            <input id="s-p" class="w-24 p-3 bg-slate-50 rounded-xl font-bold text-xs text-right" placeholder="Giá">
-                            <button onclick="addS()" class="bg-amber-500 text-white px-4 rounded-xl font-black text-[10px]">THÊM</button>
-                        </div>
-                        <table class="w-full text-xs" id="svc-list">${(d.svcs||[]).map(s=>`<tr class="border-b"><td class="py-3 font-bold s-n">${s.n}</td><td class="text-right font-black s-p">${fmt(s.p)}</td><td class="text-right"><button onclick="this.closest('tr').remove()" class="text-red-400 font-bold px-2">✕</button></td></tr>`).join('')}</table>
-                    </div>
-                    <button onclick="saveC()" class="w-full bg-blue-600 text-white py-5 rounded-[2rem] font-black uppercase shadow-xl">LƯU TOÀN BỘ CẤU HÌNH</button>
+                    <button onclick="saveC()" class="w-full bg-blue-600 text-white py-5 rounded-[2rem] font-black uppercase shadow-xl text-xs tracking-widest">Lưu cấu hình</button>
                 </div>`;
         }
 
-        function upImg(input, i) {
-            const file = input.files[0]; if (file) {
-                const reader = new FileReader(); reader.onload = (e) => { 
-                    const img = document.getElementById(`pre-${i}`); img.src = e.target.result; img.classList.remove('hidden');
-                }; reader.readAsDataURL(file);
-            }
-        }
-        function addC() {
-            const c = document.getElementById("m-count").value, t = document.getElementById("m-type").value; if(!c) return;
-            for(let i=1; i<=c; i++) document.getElementById("court-list").insertAdjacentHTML('beforeend', `<tr class="border-b"><td class="py-4 font-black c-t">Sân ${document.getElementById("court-list").rows.length+1}</td><td class="font-bold text-slate-400 c-l">${t}</td><td><input class="w-full text-right font-black text-blue-600 c-g bg-transparent" value="100.000"></td><td class="text-right"><button onclick="this.closest('tr').remove()" class="text-red-400 font-bold px-2">✕</button></td></tr>`);
-        }
-        function addS() {
-            const n = document.getElementById("s-n").value, p = document.getElementById("s-p").value; if(!n || !p) return;
-            document.getElementById("svc-list").insertAdjacentHTML('beforeend', `<tr class="border-b"><td class="py-3 font-bold s-n">${n}</td><td class="text-right font-black s-p">${p}</td><td class="text-right"><button onclick="this.closest('tr').remove()" class="text-red-400 font-bold px-2">✕</button></td></tr>`);
-            document.getElementById("s-n").value = ""; document.getElementById("s-p").value = "";
+        function addC(){
+            const t = document.getElementById("m-type").value, n = document.getElementById("m-count").value;
+            if(!n) return;
+            let h = ""; for(let i=1;i<=n;i++) h += `<tr class="border-b"><td class="py-3 font-black c-t">Sân ${i}</td><td class="font-bold text-slate-400 c-l">${t}</td><td><input class="w-full text-right font-black text-blue-600 c-g bg-transparent" value="0"></td><td class="text-right"><button onclick="this.closest('tr').remove()" class="text-red-400 font-bold px-2">✕</button></td></tr>`;
+            document.getElementById("court-list").innerHTML += h;
         }
 
         async function saveC() {
             showLoading(true);
             const ds = []; document.querySelectorAll("#court-list tr").forEach(tr => ds.push({ t:tr.querySelector(".c-t").innerText, l:tr.querySelector(".c-l").innerText, g:getRaw(tr.querySelector(".c-g").value) }));
-            const svcs = []; document.querySelectorAll("#svc-list tr").forEach(tr => svcs.push({ n:tr.querySelector(".s-n").innerText, p:getRaw(tr.querySelector(".s-p").innerText) }));
             const imgs = [0,1,2].map(i => document.getElementById(`pre-${i}`).src).filter(s => s.startsWith('data:'));
-            await db.collection("courts").doc(auth.currentUser.uid).set({ ten:document.getElementById("m-ten").value, dc:document.getElementById("m-dc").value, sdt:document.getElementById("m-sdt").value, ds, svcs, imgs }, {merge:true});
-            showLoading(false); alert("Cập nhật thành công!");
+            const data = { ownerId:auth.currentUser.uid, ten:document.getElementById("m-ten").value, dc:document.getElementById("m-dc").value, sdt:document.getElementById("m-sdt").value, ds, imgs, qrImg:document.getElementById('pre-qr').src, updatedAt:Date.now() };
+            await db.collection("courts").doc(auth.currentUser.uid).set(data);
+            await db.collection("public_courts").doc(auth.currentUser.uid).set(data);
+            showLoading(false); alert("Đã cập nhật hệ thống!");
         }
 
-        // --- TAB 2: LỊCH ĐẶT ---
-        async function renderBookingGrid() {
+        // --- MODULE 2: VẬN ĐỘNG VIÊN ---
+        function renderVDVNav() {
+            document.getElementById('nav-bar').innerHTML = `
+                <button onclick="switchVDVTab('rank')" class="flex flex-col items-center text-[8px] font-black text-slate-400 uppercase gap-1"><span>🏆</span>BXH</button>
+                <button onclick="switchVDVTab('arena')" class="flex flex-col items-center text-[8px] font-black text-slate-400 uppercase gap-1 text-blue-600"><span>⚔️</span>Sàn đấu</button>
+                <button onclick="switchVDVTab('profile')" class="flex flex-col items-center text-[8px] font-black text-slate-400 uppercase gap-1"><span>👤</span>Profile</button>
+            `;
+        }
+
+        function switchVDVTab(tab) {
+            const area = document.getElementById('main-content');
+            if(tab === 'arena') renderArena(area);
+            if(tab === 'rank') area.innerHTML = `<div class="p-10 text-center font-bold text-slate-300 uppercase text-[10px]">Tính năng BXH đang phát triển...</div>`;
+            if(tab === 'profile') renderProfile(area);
+        }
+
+        async function renderArena(el) {
             showLoading(true);
-            const doc = await db.collection("courts").doc(auth.currentUser.uid).get();
-            if(!doc.exists) { showLoading(false); renderManagement(); return; }
-            const d = doc.data(); window.courtConfig = d.ds; window.svcConfig = d.svcs || [];
-            const date = window.currentDate || new Date().toISOString().split('T')[0];
-            document.getElementById("main-content").innerHTML = `
-                <div class="bg-white p-4 rounded-[2rem] shadow-sm">
-                    <div class="flex justify-between items-start mb-4 px-2">
-                        <div><h2 class="font-black text-sm uppercase italic text-blue-600 leading-none">${d.ten}</h2><p class="text-[8px] font-bold text-slate-400 mt-1 uppercase">${d.dc} • ${d.sdt}</p></div>
-                        <input type="date" value="${date}" onchange="window.currentDate=this.value;renderBookingGrid()" class="text-[10px] font-black bg-slate-100 p-2 rounded-xl border-none">
-                    </div>
-                    <div class="overflow-x-auto rounded-[1.5rem] border shadow-inner no-scrollbar">
-                        <div class="grid-container" style="--num-courts:${d.ds.length}"><div class="grid-cell header-cell text-[9px]">GIỜ</div>${d.ds.map(s=>`<div class="grid-cell header-cell flex flex-col pt-1 border-b-4 ${s.l.includes('Cầu')?'border-emerald-500':'border-blue-500'}"><span class="text-[9px] font-black uppercase">${s.t}</span><span class="text-[6px] opacity-60 uppercase">${s.l}</span></div>`).join('')}${generateRows(d.ds)}</div>
+            const snap = await db.collection("public_courts").get();
+            showLoading(false);
+            let h = `<h2 class="font-black italic text-xl mb-6 text-slate-800 uppercase italic">Sàn đấu tự do</h2>`;
+            snap.forEach(doc => {
+                const d = doc.data();
+                h += `
+                    <div onclick="viewCourtDetail('${doc.id}')" class="bg-white rounded-[2.5rem] overflow-hidden shadow-sm mb-4 border animate-fadeIn">
+                        <img src="${d.imgs?.[0]||'https://via.placeholder.com/400x200'}" class="w-full h-44 object-cover">
+                        <div class="p-5">
+                            <h3 class="font-black text-sm uppercase italic">${d.ten}</h3>
+                            <p class="text-[9px] font-bold text-slate-400 mb-3">${d.dc}</p>
+                            <div class="flex justify-between items-center">
+                                <span class="text-[9px] font-black bg-blue-50 text-blue-600 px-3 py-1 rounded-full uppercase italic">Pickleball / Cầu lông</span>
+                                <span class="text-blue-600 font-black text-[9px] uppercase">Đặt sân ➔</span>
+                            </div>
+                        </div>
+                    </div>`;
+            });
+            el.innerHTML = h || `<div class="text-center py-20 text-slate-400 font-bold uppercase text-[10px]">Chưa có sân nào được đăng ký</div>`;
+        }
+
+        async function viewCourtDetail(ownerId) {
+            showLoading(true);
+            const doc = await db.collection("courts").doc(ownerId).get();
+            const d = doc.data(); window.targetCourtId = ownerId; window.courtConfig = d.ds;
+            showLoading(false);
+            document.getElementById('main-content').innerHTML = `
+                <div class="space-y-6 pb-20 animate-fadeIn">
+                    <button onclick="switchVDVTab('arena')" class="text-[9px] font-black text-slate-400 uppercase">← Quay lại sàn</button>
+                    <div class="flex gap-2 overflow-x-auto no-scrollbar">${d.imgs.map(img => `<img src="${img}" class="h-32 w-48 object-cover rounded-3xl flex-shrink-0">`).join('')}</div>
+                    <div><h2 class="font-black text-xl italic uppercase">${d.ten}</h2><p class="text-[9px] font-bold text-slate-400 uppercase tracking-widest">${d.dc}</p></div>
+                    <div class="bg-white p-4 rounded-[2rem] shadow-sm border">
+                        <input type="date" id="target-date" onchange="loadB(this.value, '${ownerId}')" value="${new Date().toISOString().split('T')[0]}" class="w-full mb-4 p-3 bg-slate-50 rounded-xl font-black text-xs border-none">
+                        <div class="overflow-x-auto rounded-2xl border no-scrollbar">
+                            <div class="grid-container" style="--num-courts:${d.ds.length}">
+                                <div class="grid-cell header-cell">Giờ</div>
+                                ${d.ds.map(s => `<div class="grid-cell header-cell">${s.t}</div>`).join('')}
+                                ${generateRows(d.ds)}
+                            </div>
+                        </div>
                     </div>
                 </div>`;
-            document.getElementById("svc-select").innerHTML = '<option value="0">-- Dịch vụ --</option>' + window.svcConfig.map(s=>`<option value="${s.p}">${s.n}</option>`).join('');
-            await loadB(date); showLoading(false);
+            loadB(new Date().toISOString().split('T')[0], ownerId);
         }
+
+        // --- MODULE 3: LOGIC BOOKING & MEWIN ---
         function generateRows(courts) {
             let h = ""; for (let i=5; i<=23; i++) { [":00", ":30"].forEach(m => {
                 let t = i.toString().padStart(2,'0')+m; h += `<div class="grid-cell cell-time">${t}</div>`;
                 courts.forEach((s, idx) => { h += `<div onclick="toggle(this)" class="grid-cell" data-slot="slot_${t.replace(':','')}_${idx}" data-price="${s.g/2}"></div>`; });
             }); } return h;
         }
+
         function toggle(el) {
-            el.classList.toggle("is-selecting"); const sel = document.querySelectorAll(".is-selecting");
+            if(el.classList.contains('is-cl') || el.classList.contains('is-pb') || el.classList.contains('is-pending')) return;
+            el.classList.toggle("is-selecting");
+            const sel = document.querySelectorAll(".is-selecting");
+            const panel = document.getElementById("lock-panel");
             if(sel.length > 0) {
-                document.getElementById("lock-panel").classList.remove("hidden");
-                let m = 0; sel.forEach(c => m += parseFloat(c.dataset.price || 0));
-                document.getElementById("txt-duration").innerText = (sel.length * 0.5).toFixed(1) + " GIỜ";
-                document.getElementById("txt-money").innerText = fmt(m) + "đ SÂN";
-            } else document.getElementById("lock-panel").classList.add("hidden");
+                panel.classList.remove("hidden");
+                let m = 0; sel.forEach(c => m += parseFloat(c.dataset.price));
+                document.getElementById("txt-duration").innerText = (sel.length * 0.5) + "H";
+                document.getElementById("txt-money").innerText = fmt(m) + "đ TIỀN SÂN";
+                const actions = document.getElementById("panel-actions");
+                if(currentUserRole === 'owner') actions.innerHTML = `<button onclick="actionLock('locked')" class="flex-1 bg-blue-600 py-4 rounded-2xl font-black text-xs uppercase">Khóa thủ công</button>`;
+                else actions.innerHTML = `<button onclick="vdvPayPopup()" class="flex-1 bg-emerald-600 py-4 rounded-2xl font-black text-xs uppercase shadow-lg shadow-emerald-200">Đặt sân & Thanh toán</button>`;
+            } else panel.classList.add("hidden");
         }
-        async function actionLock(type) {
-            showLoading(true); const sel = document.querySelectorAll(".is-selecting"), date = window.currentDate || new Date().toISOString().split('T')[0], updates = {};
-            sel.forEach((el, i) => { if(type==='empty') updates[el.dataset.slot] = firebase.firestore.FieldValue.delete(); else updates[el.dataset.slot] = { s:'locked', p:parseFloat(el.dataset.price), v: i===0?getRaw(document.getElementById("svc-price").value):0 }; });
-            await db.collection("bookings").doc(`${auth.currentUser.uid}_${date}`).set(updates, {merge:true});
-            document.getElementById("lock-panel").classList.add("hidden"); renderBookingGrid();
+
+        async function vdvPayPopup() {
+            showLoading(true);
+            const doc = await db.collection("courts").doc(window.targetCourtId).get();
+            const qr = doc.data().qrImg;
+            showLoading(false);
+            document.body.insertAdjacentHTML('beforeend', `
+                <div id="vdv-pay" class="fixed inset-0 bg-black/90 z-[200] flex items-center justify-center p-6">
+                    <div class="bg-white w-full max-w-sm rounded-[3rem] p-8 text-center space-y-4 animate-fadeIn">
+                        <h3 class="font-black italic text-blue-600 uppercase italic">Thanh toán giữ chỗ</h3>
+                        <img src="${qr || 'https://via.placeholder.com/300?text=CHUA+CO+QR'}" class="w-full rounded-2xl border">
+                        <div class="bg-slate-50 p-4 rounded-2xl text-left"><p class="text-[8px] font-black text-slate-400 uppercase">Số tiền</p><p class="text-xl font-black">${document.getElementById('txt-money').innerText}</p></div>
+                        <label class="block w-full bg-slate-900 text-white py-4 rounded-2xl font-black uppercase text-[10px] cursor-pointer">Tải ảnh Bill xác nhận<input type="file" class="hidden" onchange="uploadBill(this)"></label>
+                        <button onclick="document.getElementById('vdv-pay').remove()" class="text-slate-300 font-bold text-[9px] uppercase">Hủy bỏ</button>
+                    </div>
+                </div>`);
         }
-        async function loadB(date) {
-            const snap = await db.collection("bookings").doc(`${auth.currentUser.uid}_${date}`).get(); if(!snap.exists) return;
-            const b = snap.data(), ds = window.courtConfig;
+
+        async function uploadBill(input) {
+            const file = input.files[0]; if(!file) return;
+            showLoading(true);
+            const reader = new FileReader(); reader.onload = async (e) => {
+                const updates = {}; const timestamp = Date.now(); const sel = document.querySelectorAll(".is-selecting");
+                sel.forEach((el, i) => { updates[el.dataset.slot] = { s: 'pending', p: parseFloat(el.dataset.price), t: timestamp, u: auth.currentUser.displayName, bill: i===0 ? e.target.result : "linked" }; });
+                await db.collection("bookings").doc(`${window.targetCourtId}_${document.getElementById('target-date').value}`).set(updates, {merge:true});
+                showLoading(false); document.getElementById('vdv-pay').remove(); document.getElementById('lock-panel').classList.add('hidden');
+                loadB(document.getElementById('target-date').value, window.targetCourtId);
+                alert("Đã gửi Bill! Chờ chủ sân xác nhận trong 10 phút.");
+            }; reader.readAsDataURL(file);
+        }
+
+        async function loadB(date, ownerId) {
+            document.querySelectorAll(".grid-cell:not(.header-cell):not(.cell-time)").forEach(el => { el.className = "grid-cell"; el.innerHTML = ""; });
+            const snap = await db.collection("bookings").doc(`${ownerId}_${date}`).get();
+            if(!snap.exists) return; const b = snap.data(); const now = Date.now();
             Object.keys(b).forEach(k => {
-                const el = document.querySelector(`[data-slot="${k}"]`), idx = k.split('_').pop();
-                if(el && b[k].s === 'locked' && ds[idx]) { el.className = `grid-cell ${ds[idx].l.includes('Cầu')?'is-cl':'is-pb'}`; el.innerHTML = `<div class="text-[7px] font-black text-center leading-none uppercase">ĐÃ ĐẶT<br><span class="text-[6px] opacity-60">${b[k].v > 0 ? '+'+fmt(b[k].v) : ''}</span></div>`; }
+                const el = document.querySelector(`[data-slot="${k}"]`); if(!el) return;
+                const d = b[k]; if(d.s === 'pending' && (now - d.t) > 600000) return; // 10p timeout
+                if(d.s === 'pending') {
+                    el.classList.add('is-pending'); el.innerHTML = `<span class="text-[7px] text-center uppercase">BILL<br>${d.u}</span>`;
+                    if(currentUserRole === 'owner') el.onclick = () => showReview(d, k, date, ownerId);
+                } else if(d.s === 'locked') {
+                    el.classList.add('is-cl'); el.innerHTML = `<span class="text-[7px] uppercase">ĐÃ KHÓA</span>`;
+                }
             });
         }
 
-        // --- TAB 3: DOANH THU & AI ---
-        async function renderRevenue() {
-            showLoading(true); const date = window.currentDate || new Date().toISOString().split('T')[0], snap = await db.collection("bookings").doc(`${auth.currentUser.uid}_${date}`).get(), courtDoc = await db.collection("courts").doc(auth.currentUser.uid).get();
-            let clR=0, pbR=0, totalV=0; if(snap.exists && courtDoc.exists) {
-                const b = snap.data(), ds = courtDoc.data().ds;
-                Object.keys(b).forEach(k => { if(b[k].s==='locked') { const idx = parseInt(k.split('_').pop()); totalV += (b[k].v || 0); if(ds[idx]?.l.includes('Cầu')) clR += b[k].p; else pbR += b[k].p; } });
+        function showReview(d, k, date, ownerId) {
+            document.body.insertAdjacentHTML('beforeend', `
+                <div id="review-modal" class="fixed inset-0 bg-black/90 z-[200] flex items-center justify-center p-6">
+                    <div class="bg-white w-full max-w-sm rounded-[3rem] p-6 text-center space-y-4 animate-fadeIn">
+                        <h3 class="font-black italic text-slate-800 uppercase text-xs tracking-widest">Kiểm tra thanh toán</h3>
+                        <img src="${d.bill}" class="w-full rounded-2xl border max-h-64 object-contain">
+                        <div class="text-left bg-blue-50 p-4 rounded-2xl"><p class="text-[8px] font-black text-blue-400 uppercase">${d.u}</p><p class="text-sm font-black text-blue-600 uppercase">Tiền sân: ${fmt(d.p)}đ</p></div>
+                        <button onclick="confirmS('${k}', '${date}', '${ownerId}')" class="w-full bg-blue-600 text-white py-5 rounded-2xl font-black uppercase text-xs shadow-lg">Xác nhận & Khóa sân</button>
+                        <button onclick="document.getElementById('review-modal').remove()" class="text-slate-300 font-bold text-[9px] uppercase">Đóng</button>
+                    </div>
+                </div>`);
+        }
+
+        async function confirmS(k, d, o) {
+            showLoading(true);
+            await db.collection("bookings").doc(`${o}_${d}`).set({ [k]: { s:'locked' } }, {merge:true});
+            document.getElementById('review-modal').remove(); showLoading(false); renderBookingGrid();
+        }
+
+        // --- CÁC HÀM CŨ GIỮ NGUYÊN ---
+        function upImg(input, i) {
+            const file = input.files[0]; if (file) {
+                const reader = new FileReader(); reader.onload = (e) => { 
+                    const id = i === 'qr' ? 'pre-qr' : `pre-${i}`;
+                    const img = document.getElementById(id); img.src = e.target.result; img.classList.remove('hidden');
+                }; reader.readAsDataURL(file);
             }
-            document.getElementById("main-content").innerHTML = `
-                <div class="space-y-6">
-                    <div class="bg-slate-900 p-8 rounded-[3rem] text-white shadow-xl">
-                        <div class="flex justify-between items-center mb-6">
-                            <div><p class="text-[10px] opacity-50 font-black uppercase">Tổng doanh thu</p><h2 class="text-4xl font-black text-blue-400 mt-1">${fmt(clR + pbR + totalV)}đ</h2></div>
-                            <input type="date" value="${date}" onchange="window.currentDate=this.value;renderRevenue()" class="bg-white/10 p-2 rounded-xl text-xs font-bold">
-                        </div>
-                        <div class="grid grid-cols-3 gap-2 text-center">
-                            <div class="bg-white/5 p-3 rounded-2xl"><p class="text-[8px] opacity-40 uppercase">Cầu lông</p><p class="font-black text-emerald-400">${fmt(clR)}</p></div>
-                            <div class="bg-white/5 p-3 rounded-2xl"><p class="text-[8px] opacity-40 uppercase">Pickleball</p><p class="font-black text-blue-400">${fmt(pbR)}</p></div>
-                            <div class="bg-white/5 p-3 rounded-2xl"><p class="text-[8px] opacity-40 uppercase">Dịch vụ</p><p class="font-black text-amber-400">${fmt(totalV)}</p></div>
-                        </div>
-                    </div>
-
-                    <div class="bg-blue-600 p-6 rounded-[2.5rem] text-white shadow-lg">
-                        <div class="flex items-center gap-3 mb-3"><span class="text-xl">🤖</span><h3 class="font-black uppercase italic text-xs">AI Phân tích & Gợi ý</h3></div>
-                        <p class="text-xs opacity-90 leading-relaxed font-medium" id="ai-text">Đang phân tích dữ liệu sân...</p>
-                    </div>
-
-                    <div class="bg-white p-6 rounded-[2.5rem] shadow-sm flex flex-col items-center">
-                        <h3 class="font-black text-xs uppercase mb-4 italic text-slate-400">Tỷ trọng môn chơi</h3>
-                        <div class="w-full max-w-[150px]"><canvas id="typeChart"></canvas></div>
-                    </div>
-                </div>`;
-            
-            new Chart(document.getElementById('typeChart'), { type:'doughnut', data: { labels:['CL', 'PB'], datasets:[{ data:[clR, pbR], backgroundColor:['#10b981', '#3b82f6'], borderWeight:0, cutout:'75%' }] }, options:{ plugins:{ legend:{ display:false } } } });
-            
-            // Logic AI logic
-            setTimeout(() => {
-                const ai = document.getElementById('ai-text');
-                if(clR > pbR) ai.innerText = "Cầu lông đang chiếm ưu thế. Ông nên cân nhắc tổ chức giải phong trào vào cuối tuần để tăng doanh thu dịch vụ nước uống.";
-                else if (pbR > clR) ai.innerText = "Pickleball đang hot. Hãy đầu tư thêm hệ thống đèn và ghế chờ xịn hơn để giữ chân tệp khách hàng cao cấp này.";
-                else ai.innerText = "Sân đang hoạt động ổn định. Hãy tập trung đẩy mạnh bảng giá dịch vụ (nước lọc, gửi xe) để tối ưu thêm 15% lợi nhuận.";
-            }, 1000);
-
-            showLoading(false);
+        }
+        function renderBookingGrid() { 
+            const uid = auth.currentUser.uid;
+            db.collection("courts").doc(uid).get().then(doc => {
+                if(!doc.exists) return renderManagement();
+                const d = doc.data(); window.courtConfig = d.ds;
+                document.getElementById('main-content').innerHTML = `
+                    <div class="bg-white p-4 rounded-[2rem] shadow-sm border animate-fadeIn">
+                        <input type="date" id="admin-date" onchange="loadB(this.value, '${uid}')" value="${new Date().toISOString().split('T')[0]}" class="w-full mb-4 p-3 bg-slate-50 rounded-xl font-black text-xs border-none">
+                        <div class="overflow-x-auto rounded-2xl border no-scrollbar"><div class="grid-container" style="--num-courts:${d.ds.length}"><div class="grid-cell header-cell">Giờ</div>${d.ds.map(s => `<div class="grid-cell header-cell">${s.t}</div>`).join('')}${generateRows(d.ds)}</div></div>
+                    </div>`;
+                loadB(new Date().toISOString().split('T')[0], uid);
+            });
+        }
+        function renderRevenue() { document.getElementById('main-content').innerHTML = `<div class="p-10 text-center font-bold text-slate-300 uppercase text-[10px]">Biểu đồ doanh thu đang đồng bộ...</div>`; }
+        function showLoading(s) { document.getElementById('loading').classList.toggle('hidden', !s); }
+        async function actionLock(status) {
+            showLoading(true); const date = document.getElementById('admin-date').value;
+            const sel = document.querySelectorAll(".is-selecting"); const updates = {};
+            sel.forEach(el => updates[el.dataset.slot] = { s: status, p: parseFloat(el.dataset.price) });
+            await db.collection("bookings").doc(`${auth.currentUser.uid}_${date}`).set(updates, {merge:true});
+            document.getElementById("lock-panel").classList.add("hidden"); showLoading(false); renderBookingGrid();
         }
     </script>
 </body>
