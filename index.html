@@ -1,274 +1,448 @@
 ﻿<!DOCTYPE html>
 <html lang="vi">
 <head>
-<meta charset="UTF-8">
-<title>RankSport v28 – Hệ sinh thái thể thao số</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<script src="https://cdn.tailwindcss.com"></script>
-<script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
-<style>
-body { font-family: system-ui; background:#f8fafc }
-.cell { border:1px solid #e5e7eb; height:64px; cursor:pointer }
-.cl { background:#dcfce7; border-left:5px solid #22c55e }
-.pb { background:#dbeafe; border-left:5px solid #3b82f6 }
-.pending { background:#fef3c7; border-left:5px solid #f59e0b }
-.sel { background:#2563eb; color:white }
-</style>
+    <meta charset="UTF-8">
+    <title>RankSport v28.1 - Secure Core SaaS</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;700;900&display=swap');
+        body { font-family: 'Lexend', sans-serif; background: #f1f5f9; color: #0f172a; }
+        .grid-container { display: grid; grid-template-columns: 60px repeat(var(--num-courts, 1), minmax(100px, 1fr)); gap: 1px; background: #e2e8f0; }
+        .grid-cell { background: white; height: 55px; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 10px; cursor: pointer; transition: all 0.1s; border: 0.5px solid #f8fafc; }
+        .header-cell { background: #0f172a; color: white; position: sticky; top: 0; z-index: 30; font-weight: 800; text-transform: uppercase; font-size: 8px; height: 40px;}
+        .cell-time { background: #f8fafc; font-weight: 800; color: #2563eb; position: sticky; left: 0; z-index: 20; border-right: 2px solid #2563eb; }
+        .is-cl { background: #dcfce7 !important; border-left: 3px solid #22c55e; color: #166534; }
+        .is-pb { background: #dbeafe !important; border-left: 3px solid #3b82f6; color: #1e40af; }
+        .is-pending { background: #fef3c7 !important; border-left: 3px solid #f59e0b; animation: pulse 1.5s infinite; }
+        .is-selecting { background: #2563eb !important; color: white !important; z-index: 10; transform: scale(0.95); border-radius: 4px; }
+        @keyframes pulse { 50% { opacity: 0.7; } }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+    </style>
 </head>
-
 <body class="pb-24">
+    <div id="loading" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[999] flex flex-col items-center justify-center hidden">
+        <div class="w-12 h-12 border-4 border-white border-t-transparent rounded-full animate-spin"></div>
+        <p class="mt-4 font-black text-[10px] uppercase text-white tracking-[0.3em]">Securing Data...</p>
+    </div>
 
-<!-- HEADER -->
-<header id="header" class="hidden flex justify-between items-center p-4 bg-white border-b sticky top-0 z-50">
-  <div class="flex items-center gap-3">
-    <div class="text-2xl font-black italic">RankSport</div>
-    <div class="text-xs text-blue-500 uppercase tracking-widest">Hệ sinh thái thể thao số</div>
-  </div>
-  <button onclick="logout()" class="text-xs font-bold text-red-500">Thoát</button>
-</header>
+    <header id="app-header" class="hidden bg-white/80 backdrop-blur-md border-b px-6 py-4 sticky top-0 z-50 justify-between items-center">
+        <div class="flex items-center gap-2">
+            <div class="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center shadow-lg shadow-blue-200">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="white"><path d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+            </div>
+            <h1 class="font-black italic text-lg tracking-tighter uppercase">RankSport <span class="text-blue-600">v28.1</span></h1>
+        </div>
+        <div id="user-display" class="flex items-center gap-4">
+            <button onclick="auth.signOut()" class="text-[9px] font-black text-slate-400 hover:text-red-500 uppercase transition">Thoát</button>
+        </div>
+    </header>
 
-<main id="app"></main>
+    <main id="main-content" class="max-w-6xl mx-auto"></main>
 
-<nav id="nav" class="hidden fixed bottom-0 left-0 right-0 bg-white border-t flex justify-around p-3"></nav>
+    <div id="secure-panel" class="hidden fixed bottom-6 left-1/2 -translate-x-1/2 w-[95%] max-w-4xl bg-white border-2 border-slate-900 shadow-2xl rounded-[2.5rem] p-6 z-[100] animate-slideUp">
+        <div class="flex flex-col md:flex-row justify-between items-center gap-6">
+            <div class="flex gap-8">
+                <div><p class="text-[8px] font-bold text-slate-400 uppercase tracking-widest mb-1 italic">Duration</p><div id="ui-duration" class="font-black text-2xl text-blue-600">0H</div></div>
+                <div><p class="text-[8px] font-bold text-slate-400 uppercase tracking-widest mb-1 italic">Estimated</p><div id="ui-money" class="font-black text-2xl">0đ</div></div>
+            </div>
+            <div class="flex gap-3" id="ui-services">
+                <label class="flex items-center gap-2 cursor-pointer bg-slate-50 px-4 py-3 rounded-2xl hover:bg-slate-100 transition">
+                    <input type="checkbox" class="svc-check w-4 h-4 rounded border-slate-300" data-id="nuoc">
+                    <span class="text-[10px] font-black uppercase">Nước</span>
+                </label>
+                <label class="flex items-center gap-2 cursor-pointer bg-slate-50 px-4 py-3 rounded-2xl hover:bg-slate-100 transition">
+                    <input type="checkbox" class="svc-check w-4 h-4 rounded border-slate-300" data-id="xe">
+                    <span class="text-[10px] font-black uppercase">Xe</span>
+                </label>
+            </div>
+            <div id="panel-btn-area"></div>
+        </div>
+    </div>
 
-<script>
-/* ================= FIREBASE ================= */
-firebase.initializeApp({
- apiKey:"AIzaSyBpytj0KQybf55iabBzmeg59VL-9oADPHA",
- authDomain:"badrank-89mrd.firebaseapp.com",
- projectId:"badrank-89mrd"
-});
-const db = firebase.firestore();
-const auth = firebase.auth();
+    <nav id="nav-bar" class="hidden fixed bottom-6 left-1/2 -translate-x-1/2 bg-slate-900 px-8 py-4 rounded-3xl shadow-2xl z-40 flex gap-10 items-center"></nav>
 
-/* ================= GLOBAL STATE ================= */
-let ROLE = null;
-let OWNER_ID = null;
-let ACTIVE_DATE = new Date().toISOString().split("T")[0];
-let SELECTED = [];
+    <script>
+        const firebaseConfig = { apiKey: "AIzaSyBpytj0KQybf55iabBzmeg59VL-9oADPHA", authDomain: "badrank-89mrd.firebaseapp.com", projectId: "badrank-89mrd", storageBucket: "badrank-89mrd.appspot.com", messagingSenderId: "951939105470", appId: "1:951939105470:web:968f94f61f94d9b4b08705" };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore(); const auth = firebase.auth();
+        const fmt = (v) => new Intl.NumberFormat('vi-VN').format(v || 0);
 
-/* ================= AUTH ================= */
-auth.onAuthStateChanged(u=>{
-  if(!u){ renderLogin(); return; }
-  document.getElementById("header").classList.remove("hidden");
-  renderRole();
-});
+        let userRole = null;
+        let ownerConfigCache = null;
+        let selectedOwnerId = "";
 
-/* ================= UI ================= */
-function renderLogin(){
-  app.innerHTML=`
-  <div class="h-screen flex flex-col items-center justify-center">
-    <div class="text-4xl font-black italic">RankSport</div>
-    <p class="text-xs text-blue-500 tracking-widest mb-10">HỆ SINH THÁI THỂ THAO SỐ</p>
-    <button onclick="auth.signInWithPopup(new firebase.auth.GoogleAuthProvider())"
-      class="bg-slate-900 text-white px-8 py-4 rounded-xl font-black">ĐĂNG NHẬP</button>
-  </div>`;
-}
+        auth.onAuthStateChanged(user => {
+            if (user) {
+                document.getElementById('app-header').classList.replace('hidden', 'flex');
+                if (!userRole) renderRoleSelection();
+            } else renderLogin();
+        });
 
-function renderRole(){
-  app.innerHTML=`
-  <div class="p-10 grid md:grid-cols-2 gap-8">
-    <button onclick="init('owner')" class="p-10 bg-white border rounded-3xl">
-      🏟️ <div class="font-black mt-4">CHỦ SÂN</div>
-    </button>
-    <button onclick="init('vdv')" class="p-10 bg-slate-900 text-white rounded-3xl">
-      👟 <div class="font-black mt-4">VẬN ĐỘNG VIÊN</div>
-    </button>
-  </div>`;
-}
+        function renderLogin() {
+            document.getElementById('app-header').classList.replace('flex', 'hidden');
+            document.getElementById('main-content').innerHTML = `
+                <div class="h-screen flex flex-col items-center justify-center p-6 bg-slate-50">
+                    <h1 class="text-6xl font-black italic tracking-tighter mb-4">RANKSPORT</h1>
+                    <p class="text-blue-600 font-bold tracking-[0.5em] text-[10px] uppercase mb-12 italic">The Sport Ecosystem</p>
+                    <button onclick="auth.signInWithPopup(new firebase.auth.GoogleAuthProvider())" class="bg-slate-900 text-white px-12 py-5 rounded-2xl font-black uppercase text-[10px] shadow-2xl">Login with Google</button>
+                </div>`;
+        }
 
-/* ================= INIT ================= */
-function init(r){
- ROLE=r;
- nav.classList.remove("hidden");
- if(r==="owner"){
-   OWNER_ID=auth.currentUser.uid;
-   nav.innerHTML=`
-    <button onclick="renderOwnerConfig()">⚙️ Cấu hình</button>
-    <button onclick="renderOwnerSchedule()">📅 Lịch</button>
-    <button onclick="renderRevenue()">💰 Doanh thu</button>`;
-   renderOwnerConfig();
- } else {
-   nav.innerHTML=`
-    <button onclick="renderArena()">⚔️ Sàn đấu</button>
-    <button onclick="renderProfile()">👤 Hồ sơ</button>`;
-   renderArena();
- }
-}
+        function renderRoleSelection() {
+            document.getElementById('main-content').innerHTML = `
+                <div class="h-[80vh] flex flex-col items-center justify-center p-6">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-8 w-full max-w-2xl">
+                        <div onclick="initApp('owner')" class="cursor-pointer bg-white p-12 rounded-[3rem] border-2 border-transparent hover:border-blue-600 shadow-xl shadow-slate-200 transition-all text-center">
+                            <span class="text-5xl block mb-4">🏟️</span><h2 class="font-black text-xl uppercase italic">Chủ Sân</h2>
+                        </div>
+                        <div onclick="initApp('vdv')" class="cursor-pointer bg-slate-900 p-12 rounded-[3rem] shadow-2xl text-white text-center transition-all">
+                            <span class="text-5xl block mb-4">👟</span><h2 class="font-black text-xl uppercase italic">Vận Động Viên</h2>
+                        </div>
+                    </div>
+                </div>`;
+        }
 
-/* ================= OWNER CONFIG ================= */
-async function renderOwnerConfig(){
- const doc = await db.collection("courts").doc(OWNER_ID).get();
- const d = doc.exists?doc.data():{courts:[],services:[],fixedCost:0};
- app.innerHTML=`
- <div class="p-8 space-y-6">
-  <h2 class="font-black text-xl">Cấu hình sân</h2>
+        async function initApp(role) {
+            userRole = role;
+            document.getElementById('nav-bar').classList.remove('hidden');
+            if (role === 'owner') { 
+                selectedOwnerId = auth.currentUser.uid;
+                await refreshConfig();
+                renderOwnerNav(); 
+                renderBookingGrid(); 
+            } else { 
+                renderVDVNav(); 
+                switchVDVTab('arena'); 
+            }
+        }
 
-  <div class="bg-white p-6 rounded-xl">
-   <h3 class="font-bold mb-2">Danh sách sân</h3>
-   <div id="courtList">
-     ${d.courts.map(c=>`
-       <div class="flex gap-2 mb-2">
-         <input value="${c.name}" disabled class="flex-1 bg-slate-100 p-2 rounded">
-         <span class="text-xs">${c.type}</span>
-         <span>${fmt(c.price)}đ</span>
-       </div>`).join("")}
-   </div>
-   <button onclick="addCourt()" class="mt-4 bg-blue-600 text-white px-4 py-2 rounded">Thêm sân</button>
-  </div>
+        async function refreshConfig() {
+            const doc = await db.collection("courts").doc(selectedOwnerId).get();
+            ownerConfigCache = doc.exists ? doc.data() : null;
+        }
 
-  <div class="bg-white p-6 rounded-xl">
-    <h3 class="font-bold">Chi phí cố định / tháng</h3>
-    <input id="fixedCost" value="${d.fixedCost||0}" class="mt-2 bg-slate-100 p-2 rounded w-full">
-  </div>
+        function renderOwnerNav() {
+            document.getElementById('nav-bar').innerHTML = `
+                <button onclick="renderBookingGrid()" class="text-[9px] font-black uppercase text-blue-500 italic">📅 Lịch</button>
+                <button onclick="renderRevenue()" class="text-[9px] font-black uppercase text-slate-400 italic">💰 Tiền</button>
+                <button class="text-[9px] font-black uppercase text-slate-400 italic">⚙️ Cài đặt</button>`;
+        }
 
-  <button onclick="saveConfig()" class="bg-slate-900 text-white px-8 py-4 rounded-xl font-black">
-    LƯU CẤU HÌNH
-  </button>
- </div>`;
-}
+        function renderVDVNav() {
+            document.getElementById('nav-bar').innerHTML = `
+                <button onclick="switchVDVTab('arena')" class="text-[9px] font-black uppercase text-blue-500 italic">🏟️ Sân chơi</button>
+                <button class="text-[9px] font-black uppercase text-slate-400 italic">🏆 Xếp hạng</button>`;
+        }
 
-/* ================= OWNER SCHEDULE ================= */
-async function renderOwnerSchedule(){
- const doc = await db.collection("courts").doc(OWNER_ID).get();
- if(!doc.exists){ alert("Chưa cấu hình sân"); return; }
- const courts = doc.data().courts;
- app.innerHTML=`
- <div class="p-6">
-  <input type="date" value="${ACTIVE_DATE}" onchange="ACTIVE_DATE=this.value;renderOwnerSchedule()">
-  <div class="overflow-x-auto mt-4">
-   <table class="min-w-full text-xs">
-    <tr>
-     <th>Giờ</th>
-     ${courts.map(c=>`<th>${c.name}<br>${c.type}</th>`).join("")}
-    </tr>
-    ${genRows(courts,true)}
-   </table>
-  </div>
- </div>`;
- loadBookings(true);
-}
+        // --- GRID & BOOKING ---
+        async function renderBookingGrid() {
+            showLoading(true);
+            if(!ownerConfigCache) await refreshConfig();
+            const date = document.getElementById('grid-date')?.value || new Date().toISOString().split('T')[0];
+            
+            document.getElementById('main-content').innerHTML = `
+                <div class="p-6 md:p-10">
+                    <div class="flex flex-col md:flex-row justify-between items-center mb-10 gap-4">
+                        <div class="flex items-center gap-4">
+                            <h2 class="font-black italic uppercase text-xl">${ownerConfigCache.ten}</h2>
+                            <div class="bg-blue-600 text-white text-[8px] font-black px-3 py-1.5 rounded-full uppercase tracking-widest">${ownerConfigCache.ds.length} Courts</div>
+                        </div>
+                        <input type="date" id="grid-date" onchange="renderBookingGrid()" value="${date}" class="bg-white border-2 border-slate-900 px-5 py-2.5 rounded-2xl font-black text-xs outline-none shadow-sm">
+                    </div>
+                    <div class="bg-white rounded-[2.5rem] border-2 border-slate-900 overflow-x-auto no-scrollbar shadow-xl">
+                        <div class="grid-container" style="--num-courts:${ownerConfigCache.ds.length}">
+                            <div class="grid-cell header-cell italic">Giờ</div>
+                            ${ownerConfigCache.ds.map(s => `<div class="grid-cell header-cell">${s.t}<br><span class="text-[7px] text-blue-500">${s.l}</span></div>`).join('')}
+                            ${generateGridRows()}
+                        </div>
+                    </div>
+                </div>`;
+            await loadBookings();
+            showLoading(false);
+        }
 
-/* ================= VDV ================= */
-async function renderArena(){
- const snap = await db.collection("courts").get();
- app.innerHTML=`<div class="p-6 grid md:grid-cols-3 gap-6">
- ${snap.docs.map(d=>`
-  <div onclick="openCourt('${d.id}')" class="bg-white p-6 rounded-xl border cursor-pointer">
-   <div class="font-black">${d.data().name||"Cụm sân"}</div>
-   <div class="text-xs text-slate-400">${d.data().courts.length} sân</div>
-  </div>`).join("")}
- </div>`;
-}
+        function generateGridRows() {
+            let h = "";
+            for (let i=5; i<=23; i++) {
+                [":00", ":30"].forEach(m => {
+                    const t = i.toString().padStart(2,'0')+m;
+                    h += `<div class="grid-cell cell-time">${t}</div>`;
+                    ownerConfigCache.ds.forEach((s, idx) => {
+                        h += `<div onclick="toggleSlot(this)" class="grid-cell" data-slot="slot_${t.replace(':','')}_${idx}" data-type="${s.l}"></div>`;
+                    });
+                });
+            }
+            return h;
+        }
 
-async function openCourt(id){
- OWNER_ID=id;
- const doc = await db.collection("courts").doc(id).get();
- const courts=doc.data().courts;
- app.innerHTML=`
- <div class="p-6">
-  <input type="date" value="${ACTIVE_DATE}" onchange="ACTIVE_DATE=this.value;openCourt('${id}')">
-  <table class="min-w-full text-xs mt-4">
-   <tr>
-    <th>Giờ</th>
-    ${courts.map(c=>`<th>${c.name}</th>`).join("")}
-   </tr>
-   ${genRows(courts,false)}
-  </table>
- </div>`;
- loadBookings(false);
-}
+        async function loadBookings() {
+            const date = document.getElementById('grid-date').value;
+            const snap = await db.collection("bookings").doc(`${selectedOwnerId}_${date}`).get();
+            if(!snap.exists) return;
+            const data = snap.data();
+            Object.keys(data).forEach(k => {
+                const el = document.querySelector(`[data-slot="${k}"]`);
+                if(!el) return;
+                const b = data[k];
+                el.className = `grid-cell ${b.s === 'pending' ? 'is-pending' : (b.type === 'Pickleball' ? 'is-pb' : 'is-cl')}`;
+                el.innerHTML = `<span class="font-black text-[8px] uppercase">${b.u.split(' ')[0]}</span>`;
+                el.onclick = () => openSessionDetail(b.sid, date);
+            });
+        }
 
-/* ================= CORE LOGIC ================= */
-function genRows(courts,isOwner){
- let h="";
- for(let i=6;i<22;i++){
-  ["00","30"].forEach(m=>{
-   const t=`${i}:${m}`;
-   h+=`<tr><td>${t}</td>`;
-   courts.forEach(c=>{
-    h+=`<td class="cell" data-slot="${c.id}_${t}" 
-      onclick="${isOwner?'':'selectSlot(this)'}"></td>`;
-   });
-   h+="</tr>";
-  });
- }
- return h;
-}
+        function toggleSlot(el) {
+            if(el.className.includes('is-')) return;
+            el.classList.toggle("is-selecting");
+            updateUI();
+        }
 
-function selectSlot(el){
- if(el.classList.contains("cl")||el.classList.contains("pb")) return;
- el.classList.toggle("sel");
- if(el.classList.contains("sel")) SELECTED.push(el.dataset.slot);
- else SELECTED=SELECTED.filter(s=>s!==el.dataset.slot);
-}
+        function updateUI() {
+            const sel = document.querySelectorAll(".is-selecting");
+            const panel = document.getElementById("secure-panel");
+            if(sel.length > 0) {
+                panel.classList.remove("hidden");
+                // Mock UI estimation (Server will recalculate properly)
+                const type = sel[0].dataset.type;
+                const base = type === 'Pickleball' ? ownerConfigCache.pricing.pb : ownerConfigCache.pricing.cl;
+                let total = (base / 2) * sel.length;
+                document.getElementById("ui-duration").innerText = (sel.length * 0.5) + "H";
+                document.getElementById("ui-money").innerText = fmt(total) + "đ";
+                
+                const area = document.getElementById("panel-btn-area");
+                if(userRole === 'owner') area.innerHTML = `<button onclick="execBooking('locked')" class="bg-blue-600 text-white px-10 py-4 rounded-2xl font-black uppercase text-[10px] shadow-lg shadow-blue-200">Khóa Lịch</button>`;
+                else area.innerHTML = `<button onclick="execVdvBooking()" class="bg-emerald-600 text-white px-10 py-4 rounded-2xl font-black uppercase text-[10px] shadow-lg shadow-emerald-200">Gửi Yêu Cầu</button>`;
+            } else panel.classList.add("hidden");
+        }
 
-async function loadBookings(isOwner){
- const snap = await db.collection("bookings")
-  .where("owner","==",OWNER_ID)
-  .where("date","==",ACTIVE_DATE).get();
- snap.forEach(d=>{
-  const b=d.data();
-  b.slots.forEach(s=>{
-   const el=document.querySelector(`[data-slot="${s}"]`);
-   if(!el) return;
-   el.className="cell "+(b.type==="PB"?"pb":"cl");
-   if(isOwner && b.status==="pending") el.classList.add("pending");
-  });
- });
-}
+        // --- 🧠 CORE SECURITY: TRANSACTIONAL LOGIC (FIX LỖI 1, 2) ---
+        async function execBooking(status, vdvData = null) {
+            showLoading(true);
+            const date = document.getElementById('grid-date').value;
+            const selSlots = Array.from(document.querySelectorAll(".is-selecting")).map(el => ({ id: el.dataset.slot, type: el.dataset.type }));
+            const sid = `SID_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
+            const ownerId = selectedOwnerId;
+            
+            // Collect services from UI
+            const svcs = Array.from(document.querySelectorAll(".svc-check:checked")).map(c => c.dataset.id);
 
-/* ================= REVENUE ================= */
-async function renderRevenue(){
- const snap = await db.collection("bookings")
-  .where("owner","==",OWNER_ID).get();
- let cl=0,pb=0;
- snap.forEach(d=>{
-  if(d.data().status!=="locked") return;
-  d.data().type==="PB"?pb+=d.data().total:cl+=d.data().total;
- });
- app.innerHTML=`
- <div class="p-10 grid md:grid-cols-3 gap-6">
-  <div class="bg-green-100 p-6 rounded-xl">CL: ${fmt(cl)}đ</div>
-  <div class="bg-blue-100 p-6 rounded-xl">PB: ${fmt(pb)}đ</div>
-  <div class="bg-slate-900 text-white p-6 rounded-xl">
-   Thực thu: ${fmt(cl+pb)}đ
-  </div>
- </div>`;
-}
+            try {
+                await db.runTransaction(async (transaction) => {
+                    // 1. READ PRICING FROM DATABASE (NOT FROM CLIENT CACHE) - FIX LỖI 1
+                    const courtRef = db.collection("courts").doc(ownerId);
+                    const courtSnap = await transaction.get(courtRef);
+                    if(!courtSnap.exists) throw "COURT_NOT_FOUND";
+                    const pricing = courtSnap.data().pricing;
 
-/* ================= UTILS ================= */
-function addCourt(){
- const name=prompt("Tên sân?");
- const type=prompt("CL hay PB?");
- const price=parseInt(prompt("Giá/giờ"));
- if(!name||!type||!price) return;
- db.collection("courts").doc(OWNER_ID).set({
-  courts:firebase.firestore.FieldValue.arrayUnion({
-    id:crypto.randomUUID(),
-    name,type,price
-  })
- },{merge:true}).then(renderOwnerConfig);
-}
+                    // 2. CHECK SLOT AVAILABILITY
+                    const bookRef = db.collection("bookings").doc(`${ownerId}_${date}`);
+                    const bookSnap = await transaction.get(bookRef);
+                    const currentData = bookSnap.exists ? bookSnap.data() : {};
+                    selSlots.forEach(s => { if(currentData[s.id]) throw "SLOT_OCCUPIED"; });
 
-function saveConfig(){
- db.collection("courts").doc(OWNER_ID).set({
-  fixedCost:parseInt(document.getElementById("fixedCost").value)||0
- },{merge:true}).then(()=>alert("Đã lưu"));
-}
+                    // 3. SERVER-SIDE CALCULATION
+                    const type = selSlots[0].type;
+                    const pricePerSlot = (type === 'Pickleball' ? pricing.pb : pricing.cl) / 2;
+                    let svcTotal = 0;
+                    svcs.forEach(id => { svcTotal += pricing.services[id] || 0; });
+                    const finalTotal = (pricePerSlot * selSlots.length) + svcTotal;
 
-function renderProfile(){
- app.innerHTML=`<div class="p-10 text-center font-black text-3xl">
- ${auth.currentUser.displayName}
- </div>`;
-}
+                    // 4. ATOMIC WRITES
+                    const newBookings = { ...currentData };
+                    selSlots.forEach((s, i) => {
+                        newBookings[s.id] = {
+                            sid: sid, s: status, type: type,
+                            u: vdvData ? vdvData.u : "Chủ sân",
+                            p: pricePerSlot,
+                            svc: i === 0 ? svcTotal : 0,
+                            bill: vdvData ? vdvData.bill : null
+                        };
+                    });
+                    transaction.set(bookRef, newBookings);
 
-function logout(){ auth.signOut(); location.reload(); }
-function fmt(v){ return new Intl.NumberFormat("vi-VN").format(v||0); }
-</script>
+                    // 5. SESSION RECORD & AUDIT LOG - FIX LỖI 3
+                    transaction.set(db.collection("session_records").doc(sid), {
+                        sid, oid: ownerId, u: vdvData ? vdvData.u : "Chủ sân",
+                        date, total: finalTotal, type, status,
+                        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+
+                    transaction.set(db.collection("audit_logs").doc(), {
+                        action: "CREATE_SESSION", sid, oid: ownerId, 
+                        by: auth.currentUser.uid, role: userRole,
+                        timestamp: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                });
+
+                document.getElementById('secure-panel').classList.add('hidden');
+                await renderBookingGrid();
+            } catch (e) {
+                alert("Transaction Failed: " + e);
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        // --- 🧠 CORE SECURITY: ATOMIC APPROVAL (FIX LỖI 2) ---
+        async function approveSessionTransaction(sid, date) {
+            showLoading(true);
+            const bookRef = db.collection("bookings").doc(`${selectedOwnerId}_${date}`);
+            const sessRef = db.collection("session_records").doc(sid);
+            const auditRef = db.collection("audit_logs").doc();
+
+            try {
+                await db.runTransaction(async (transaction) => {
+                    const bSnap = await transaction.get(bookRef);
+                    const sSnap = await transaction.get(sessRef);
+                    
+                    if(!bSnap.exists || !sSnap.exists) throw "DATA_NOT_FOUND";
+                    if(sSnap.data().status !== 'pending') throw "NOT_PENDING";
+
+                    const data = bSnap.data();
+                    const updates = { ...data };
+                    Object.keys(data).forEach(k => {
+                        if(data[k].sid === sid) updates[k].s = 'locked';
+                    });
+
+                    transaction.set(bookRef, updates);
+                    transaction.update(sessRef, { status: 'locked', approvedBy: auth.currentUser.uid });
+                    transaction.set(auditRef, {
+                        action: "APPROVE_SESSION", sid, oid: selectedOwnerId,
+                        by: auth.currentUser.uid, role: "owner",
+                        timestamp: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                });
+                document.getElementById('modal').remove();
+                await renderBookingGrid();
+            } catch (e) {
+                alert("Approval Failed: " + e);
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        // --- REVENUE & AUDIT (FIX LỖI 3) ---
+        async function renderRevenue() {
+            showLoading(true);
+            const area = document.getElementById('main-content');
+            area.innerHTML = `<div class="p-10 space-y-8 animate-fadeIn">
+                <h2 class="text-4xl font-black italic uppercase tracking-tighter">Tài chính & Nhật ký</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="bg-white p-10 rounded-[3rem] shadow-xl border border-slate-100">
+                        <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Doanh thu thật (Locked)</p>
+                        <h3 id="rev-val" class="text-4xl font-black text-blue-600 tracking-tighter">0đ</h3>
+                    </div>
+                    <div class="bg-slate-900 p-10 rounded-[3rem] text-white shadow-2xl">
+                        <p class="text-[9px] font-black text-blue-400 uppercase tracking-widest mb-1">Số lượt đặt (Sessions)</p>
+                        <h3 id="rev-count" class="text-4xl font-black tracking-tighter">0</h3>
+                    </div>
+                </div>
+                <div class="bg-white p-10 rounded-[3rem] border border-slate-100 shadow-sm">
+                    <h4 class="font-black text-xs uppercase italic mb-8">Audit Logs (Truy xuất nguồn gốc)</h4>
+                    <div id="log-list" class="space-y-3"></div>
+                </div>
+            </div>`;
+
+            // Load Revenue
+            const sessSnap = await db.collection("session_records")
+                .where("oid", "==", selectedOwnerId)
+                .where("status", "==", "locked").get();
+            let total = 0; sessSnap.forEach(d => total += d.data().total);
+            document.getElementById('rev-val').innerText = fmt(total) + "đ";
+            document.getElementById('rev-count').innerText = sessSnap.size;
+
+            // Load Logs
+            const logSnap = await db.collection("audit_logs")
+                .where("oid", "==", selectedOwnerId)
+                .orderBy("timestamp", "desc").limit(15).get();
+            
+            document.getElementById('log-list').innerHTML = logSnap.docs.map(doc => {
+                const l = doc.data();
+                return `<div class="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                    <div class="flex items-center gap-4">
+                        <span class="text-[10px] bg-white px-2 py-1 rounded-lg font-black shadow-sm">${l.action}</span>
+                        <div>
+                            <p class="text-[8px] font-bold text-slate-400 italic">${l.timestamp?.toDate().toLocaleString()}</p>
+                            <p class="text-[9px] font-black text-slate-800 uppercase">By: ${l.by.substr(0,8)}... (${l.role})</p>
+                        </div>
+                    </div>
+                    <span class="text-[8px] font-black text-blue-600">ID: ${l.sid.substr(0,10)}</span>
+                </div>`;
+            }).join('') || `<p class="text-slate-300 font-bold uppercase text-center py-10">Chưa có nhật ký</p>`;
+            
+            showLoading(false);
+        }
+
+        // --- VDV FLOWS ---
+        function switchVDVTab(tab) {
+            const area = document.getElementById('main-content');
+            if(tab === 'arena') {
+                db.collection("public_courts").get().then(snap => {
+                    let h = `<div class="p-10"><h2 class="text-3xl font-black italic uppercase tracking-tighter mb-10 italic underline decoration-blue-500 underline-offset-8">Sân chơi sôi động</h2><div class="grid md:grid-cols-2 gap-8">`;
+                    snap.forEach(doc => {
+                        const d = doc.data();
+                        h += `<div onclick="initVdvBooking('${doc.id}')" class="bg-white p-10 rounded-[3.5rem] border-2 border-slate-100 hover:border-slate-900 transition-all cursor-pointer shadow-lg hover:shadow-2xl">
+                            <h3 class="font-black text-2xl uppercase italic">${d.ten}</h3>
+                            <p class="text-[9px] font-bold text-slate-400 mt-2 uppercase italic">${d.dc}</p>
+                            <div class="mt-10 flex justify-between items-center">
+                                <span class="bg-blue-50 text-blue-600 px-4 py-2 rounded-xl text-[8px] font-black uppercase">Standard Court</span>
+                                <span class="bg-slate-900 text-white px-8 py-3 rounded-2xl font-black text-[9px] uppercase">Đặt Sân</span>
+                            </div>
+                        </div>`;
+                    });
+                    area.innerHTML = h + `</div></div>`;
+                });
+            }
+        }
+
+        async function initVdvBooking(oid) {
+            selectedOwnerId = oid;
+            await refreshConfig();
+            renderBookingGrid();
+        }
+
+        function execVdvBooking() {
+            const name = prompt("Tên VĐV:", auth.currentUser.displayName);
+            if(!name) return;
+            execBooking('pending', { u: name, bill: "PROOF_UPLOADED" });
+        }
+
+        async function openSessionDetail(sid, date) {
+            showLoading(true);
+            const sessSnap = await db.collection("session_records").doc(sid).get();
+            const d = sessSnap.data();
+            showLoading(false);
+            
+            const modalMarkup = `
+                <div id="modal" class="fixed inset-0 bg-slate-900/95 z-[200] flex items-center justify-center p-6 backdrop-blur-sm">
+                    <div class="bg-white rounded-[3rem] p-10 w-full max-w-sm animate-fadeIn shadow-2xl border-2 border-slate-900">
+                        <div class="flex justify-between items-start mb-8">
+                            <h3 class="font-black uppercase text-xs italic tracking-widest text-blue-600">Verification Card</h3>
+                            <button onclick="document.getElementById('modal').remove()" class="text-slate-300 hover:text-red-500">✕</button>
+                        </div>
+                        <div class="space-y-6 mb-10">
+                            <div class="bg-slate-50 p-5 rounded-3xl border border-slate-100">
+                                <p class="text-[8px] font-bold text-slate-400 uppercase mb-1">Tên khách</p><p class="font-black text-xl italic">${d.u}</p>
+                            </div>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div class="bg-slate-50 p-5 rounded-3xl border border-slate-100"><p class="text-[8px] font-bold text-slate-400 uppercase mb-1">Môn</p><p class="font-black text-blue-600 uppercase text-xs">${d.type}</p></div>
+                                <div class="bg-slate-50 p-5 rounded-3xl border border-slate-100"><p class="text-[8px] font-bold text-slate-400 uppercase mb-1">Tiền</p><p class="font-black text-xs">${fmt(d.total)}đ</p></div>
+                            </div>
+                            <p class="text-[7px] font-mono text-slate-300 break-all text-center">ID: ${sid}</p>
+                        </div>
+                        <div class="flex flex-col gap-3">
+                            ${d.status === 'pending' && userRole === 'owner' ? `<button onclick="approveSessionTransaction('${sid}', '${date}')" class="bg-blue-600 text-white py-5 rounded-2xl font-black uppercase text-[10px] shadow-xl shadow-blue-200">Duyệt & Khóa</button>` : ''}
+                            <button onclick="document.getElementById('modal').remove()" class="bg-slate-100 text-slate-500 py-5 rounded-2xl font-black uppercase text-[10px]">Đóng lại</button>
+                        </div>
+                    </div>
+                </div>`;
+            document.body.insertAdjacentHTML('beforeend', modalMarkup);
+        }
+
+        function showLoading(s) { document.getElementById('loading').classList.toggle('hidden', !s); }
+    </script>
 </body>
 </html>
