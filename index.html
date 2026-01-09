@@ -2,65 +2,106 @@
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
-    <title>RankSport Ecosystem v24.0 - Full Option</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>RankSport Pro v25.0</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
-        body { font-family: 'Inter', sans-serif; background: #f8fafc; color: #1e293b; -webkit-tap-highlight-color: transparent; }
+        @import url('https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;700;900&display=swap');
+        :root { --primary: #3b82f6; --bg: #0f172a; --card: #1e293b; }
+        body { font-family: 'Lexend', sans-serif; background: var(--bg); color: #f1f5f9; -webkit-tap-highlight-color: transparent; }
+        
+        /* Grid cho Máy tính & Điện thoại */
+        .grid-container { 
+            display: grid; 
+            grid-template-columns: 80px repeat(var(--num-courts, 1), minmax(120px, 1fr)); 
+            background: #334155; 
+            gap: 1px;
+            border: 1px solid #334155;
+        }
+        .grid-cell { 
+            background: var(--card); 
+            height: 60px; 
+            display: flex; 
+            flex-direction: column;
+            align-items: center; 
+            justify-content: center; 
+            cursor: pointer; 
+            transition: all 0.2s;
+            font-size: 13px; /* Chữ to hơn cho PC */
+        }
+        .grid-cell:hover { background: #2d3a4f; }
+        
+        .header-cell { 
+            background: #020617; 
+            color: #94a3b8; 
+            position: sticky; 
+            top: 0; 
+            z-index: 30; 
+            font-weight: 900; 
+            text-transform: uppercase;
+            font-size: 11px;
+        }
+        .cell-time { 
+            background: #020617; 
+            font-weight: 800; 
+            color: var(--primary);
+            position: sticky; 
+            left: 0; 
+            z-index: 20; 
+        }
+
+        /* Trạng thái ô */
+        .is-cl { background: #064e3b !important; color: #34d399 !important; border-top: 3px solid #10b981; }
+        .is-pb { background: #1e3a8a !important; color: #93c5fd !important; border-top: 3px solid #3b82f6; }
+        .is-pending { background: #78350f !important; color: #fbbf24 !important; animation: pulse 1.5s infinite; }
+        .is-selecting { background: var(--primary) !important; color: white !important; transform: scale(0.95); z-index: 10; border-radius: 8px; }
+
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.6; } 100% { opacity: 1; } }
+        
+        input, select { background: #334155 !important; color: white !important; border: 1px solid #475569 !important; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
-        .grid-container { display: grid; grid-template-columns: 65px repeat(var(--num-courts, 1), minmax(100px, 1fr)); background: white; }
-        .grid-cell { border: 0.5px solid #f1f5f9; height: 50px; display: flex; align-items: center; justify-content: center; cursor: pointer; position: relative; transition: 0.2s; font-size: 10px; }
-        .header-cell { background: #0f172a; color: white; position: sticky; top: 0; z-index: 30; font-size: 10px; font-weight: 900; text-transform: uppercase; }
-        .cell-time { background: #f8fafc; font-weight: 800; border-right: 2px solid #cbd5e1; position: sticky; left: 0; z-index: 20; }
-        .is-cl { border-left: 4px solid #10b981 !important; background: #f0fdf4 !important; color: #065f46 !important; font-weight: 900; }
-        .is-pb { border-left: 4px solid #3b82f6 !important; background: #eff6ff !important; color: #1e40af !important; font-weight: 900; }
-        .is-pending { background: #fbbf24 !important; color: white !important; animation: pulse 1.5s infinite; font-weight: 900; }
-        .is-selecting { background: #dbeafe !important; border: 2px solid #2563eb !important; z-index: 10; }
-        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.7; } 100% { opacity: 1; } }
     </style>
 </head>
 <body class="pb-24">
-    <div id="loading" class="hidden fixed inset-0 bg-white/90 flex flex-col items-center justify-center z-[300]">
-        <div class="animate-spin rounded-full h-10 w-10 border-t-4 border-blue-600 mb-2"></div>
-        <p class="text-[9px] font-black text-blue-600 uppercase">Đang nén dữ liệu & Đồng bộ...</p>
+    <div id="loading" class="hidden fixed inset-0 bg-slate-900/90 flex flex-col items-center justify-center z-[300]">
+        <div class="animate-spin rounded-full h-12 w-12 border-t-4 border-blue-500 mb-4"></div>
+        <p class="font-black text-blue-500 uppercase tracking-widest text-sm">Đang đồng bộ dữ liệu...</p>
     </div>
 
-    <header class="bg-white border-b p-4 sticky top-0 z-50 flex justify-between items-center">
-        <span class="font-black italic text-xl text-blue-600 uppercase tracking-tighter">RankSport</span>
-        <div id="header-user" class="hidden flex items-center gap-2">
-            <span id="user-info" class="text-[9px] font-black bg-slate-100 px-3 py-1.5 rounded-full uppercase">...</span>
-            <button onclick="handleLogout()" class="text-[9px] font-black text-red-500 uppercase">Thoát</button>
+    <header class="bg-slate-900 border-b border-slate-800 p-5 sticky top-0 z-50 flex justify-between items-center">
+        <div class="flex items-center gap-3">
+            <div class="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center font-black italic shadow-lg shadow-blue-500/20">R</div>
+            <span class="font-black italic text-2xl text-white uppercase tracking-tighter">RankSport <span class="text-blue-500">Pro</span></span>
+        </div>
+        <div id="header-user" class="hidden items-center gap-4">
+            <span id="user-info" class="hidden md:block text-xs font-bold text-slate-400 uppercase tracking-widest">...</span>
+            <button onclick="handleLogout()" class="text-xs font-black text-red-400 border border-red-400/30 px-4 py-2 rounded-xl hover:bg-red-400/10 transition">THOÁT</button>
         </div>
     </header>
 
-    <main id="main-content" class="p-4 max-w-lg mx-auto"></main>
+    <main id="main-content" class="p-4 md:p-8 max-w-6xl mx-auto"></main>
 
-    <div id="lock-panel" class="hidden fixed bottom-20 left-4 right-4 bg-slate-900 shadow-2xl rounded-[2.5rem] p-6 z-[100] text-white animate-fadeIn">
-        <div class="flex justify-between items-end mb-4">
-            <div>
-                <div id="txt-duration" class="font-black text-2xl italic text-blue-400">0 GIỜ</div>
-                <div id="txt-money" class="text-white text-[10px] font-bold opacity-50 uppercase tracking-widest">0đ Tiền sân</div>
+    <div id="lock-panel" class="hidden fixed bottom-6 left-1/2 -translate-x-1/2 w-[95%] max-w-2xl bg-blue-600 shadow-2xl rounded-[2rem] p-6 z-[100] text-white animate-fadeIn">
+        <div class="flex flex-col md:flex-row justify-between items-center gap-4">
+            <div class="text-center md:text-left">
+                <div id="txt-duration" class="font-black text-3xl italic">0 GIỜ</div>
+                <div id="txt-money" class="text-blue-100 text-xs font-bold uppercase tracking-widest">0đ Tổng phí</div>
             </div>
-            <div class="text-right">
-                <p class="text-[8px] text-slate-400 font-black mb-1 uppercase italic">Dịch vụ đi kèm</p>
-                <select id="svc-select" onchange="document.getElementById('svc-price').value = this.value" class="bg-white/10 text-white text-[10px] font-bold p-2 rounded-xl outline-none w-32 mb-1 block ml-auto">
-                    <option value="0">Không có</option>
-                    <option value="20000">Nước suối (20k)</option>
-                    <option value="50000">Trà đá ca (50k)</option>
-                    <option value="30000">Thuê vợt (30k)</option>
-                </select>
-                <input type="text" id="svc-price" class="bg-transparent text-white font-black text-right border-b border-blue-500 outline-none w-32 text-sm block ml-auto" placeholder="0">
+            <div class="flex items-center gap-3">
+                <div class="text-right">
+                    <p class="text-[10px] text-blue-200 font-black mb-1 uppercase italic">Dịch vụ</p>
+                    <input type="number" id="svc-price" class="bg-blue-700/50 text-white font-black text-center rounded-lg p-2 w-24 outline-none" placeholder="0">
+                </div>
+                <div id="panel-actions" class="flex gap-2"></div>
             </div>
         </div>
-        <div id="panel-actions" class="flex gap-2"></div>
     </div>
 
-    <nav id="nav-bar" class="hidden fixed bottom-0 left-0 right-0 bg-white border-t flex justify-around p-4 z-50 shadow-lg"></nav>
+    <nav id="nav-bar" class="hidden fixed bottom-0 left-0 right-0 bg-slate-900 border-t border-slate-800 flex justify-around p-4 z-50 shadow-2xl md:max-w-xs md:left-auto md:right-6 md:bottom-6 md:rounded-3xl md:border"></nav>
 
     <script>
         const firebaseConfig = { apiKey: "AIzaSyBpytj0KQybf55iabBzmeg59VL-9oADPHA", authDomain: "badrank-89mrd.firebaseapp.com", projectId: "badrank-89mrd", storageBucket: "badrank-89mrd.appspot.com", messagingSenderId: "951939105470", appId: "1:951939105470:web:968f94f61f94d9b4b08705" };
@@ -72,7 +113,7 @@
 
         auth.onAuthStateChanged(user => {
             if(user) {
-                document.getElementById('header-user').classList.remove('hidden');
+                document.getElementById('header-user').classList.add('flex');
                 document.getElementById('user-info').innerText = user.displayName;
                 renderRoleSelection();
             } else renderAuth();
@@ -80,18 +121,31 @@
 
         function renderAuth() {
             document.getElementById('main-content').innerHTML = `
-                <div class="h-[70vh] flex flex-col items-center justify-center gap-6 text-center">
-                    <h1 class="text-4xl font-black italic text-blue-600">RANKSPORT</h1>
-                    <p class="text-[10px] font-bold text-slate-400 uppercase tracking-[0.3em]">Hệ sinh thái thể thao số</p>
-                    <button onclick="auth.signInWithPopup(new firebase.auth.GoogleAuthProvider())" class="w-full max-w-xs bg-slate-900 text-white p-5 rounded-[2rem] font-black shadow-xl uppercase text-xs tracking-widest">Tiếp tục với Google</button>
+                <div class="h-[70vh] flex flex-col items-center justify-center gap-8">
+                    <div class="text-center">
+                        <h1 class="text-6xl font-black italic text-white mb-2">RANKSPORT</h1>
+                        <p class="text-blue-500 font-bold tracking-[0.5em] text-sm">MANAGEMENT SYSTEM</p>
+                    </div>
+                    <button onclick="auth.signInWithPopup(new firebase.auth.GoogleAuthProvider())" class="w-full max-w-xs bg-white text-slate-900 p-5 rounded-2xl font-black shadow-2xl hover:bg-blue-500 hover:text-white transition-all uppercase text-sm tracking-widest">Đăng nhập với Google</button>
                 </div>`;
         }
 
         function renderRoleSelection() {
             document.getElementById('main-content').innerHTML = `
-                <div class="h-[70vh] flex flex-col items-center justify-center gap-4">
-                    <button onclick="initRole('owner')" class="w-full max-w-xs bg-white border-2 border-slate-100 p-6 rounded-[2.5rem] font-black shadow-sm uppercase text-sm text-slate-800">🏟️ Chủ sân / Quản lý</button>
-                    <button onclick="initRole('vdv')" class="w-full max-w-xs bg-blue-600 text-white p-6 rounded-[2.5rem] font-black shadow-xl uppercase text-sm">👟 Vận động viên</button>
+                <div class="h-[60vh] flex flex-col items-center justify-center gap-6">
+                    <p class="font-bold text-slate-400 uppercase tracking-widest text-xs">Vui lòng chọn vai trò</p>
+                    <div class="grid md:grid-cols-2 gap-6 w-full max-w-2xl">
+                        <button onclick="initRole('owner')" class="group bg-slate-800 p-10 rounded-[2.5rem] border border-slate-700 hover:border-blue-500 transition-all">
+                            <div class="text-4xl mb-4 group-hover:scale-110 transition">🏟️</div>
+                            <div class="font-black text-xl text-white uppercase italic">Chủ sân</div>
+                            <p class="text-xs text-slate-500 mt-2">Quản lý lịch, doanh thu & cấu hình</p>
+                        </button>
+                        <button onclick="initRole('vdv')" class="group bg-blue-600 p-10 rounded-[2.5rem] shadow-xl shadow-blue-500/20 hover:bg-blue-500 transition-all">
+                            <div class="text-4xl mb-4 group-hover:scale-110 transition">👟</div>
+                            <div class="font-black text-xl text-white uppercase italic">Vận động viên</div>
+                            <p class="text-blue-100 text-xs mt-2">Tìm sân, đặt chỗ & xem bảng xếp hạng</p>
+                        </button>
+                    </div>
                 </div>`;
         }
 
@@ -104,88 +158,80 @@
 
         function handleLogout() { auth.signOut().then(() => location.reload()); }
 
-        // --- NAVIGATION ---
         function renderOwnerNav() {
+            const active = "text-blue-500";
             document.getElementById('nav-bar').innerHTML = `
-                <button onclick="renderManagement()" class="flex flex-col items-center text-[8px] font-black text-slate-400 uppercase gap-1"><span>⚙️</span>Cấu hình</button>
-                <button onclick="renderBookingGrid()" class="flex flex-col items-center text-[8px] font-black text-slate-400 uppercase gap-1 text-blue-600"><span>📅</span>Lịch đặt</button>
-                <button onclick="renderRevenue()" class="flex flex-col items-center text-[8px] font-black text-slate-400 uppercase gap-1"><span>💰</span>Doanh thu</button>
+                <button onclick="renderManagement()" class="flex flex-col items-center text-[10px] font-black text-slate-500 uppercase gap-1 hover:text-white"><span>⚙️</span>Cấu hình</button>
+                <button onclick="renderBookingGrid()" class="flex flex-col items-center text-[10px] font-black ${active} uppercase gap-1"><span>📅</span>Lịch đặt</button>
+                <button onclick="renderRevenue()" class="flex flex-col items-center text-[10px] font-black text-slate-500 uppercase gap-1 hover:text-white"><span>💰</span>Doanh thu</button>
             `;
         }
 
         function renderVDVNav() {
             document.getElementById('nav-bar').innerHTML = `
-                <button onclick="switchVDVTab('rank')" class="flex flex-col items-center text-[8px] font-black text-slate-400 uppercase gap-1"><span>🏆</span>BXH</button>
-                <button onclick="switchVDVTab('arena')" class="flex flex-col items-center text-[8px] font-black text-slate-400 uppercase gap-1 text-blue-600"><span>⚔️</span>Sàn đấu</button>
-                <button onclick="switchVDVTab('profile')" class="flex flex-col items-center text-[8px] font-black text-slate-400 uppercase gap-1"><span>👤</span>Profile</button>
+                <button onclick="switchVDVTab('rank')" class="flex flex-col items-center text-[10px] font-black text-slate-500 uppercase gap-1 hover:text-white"><span>🏆</span>BXH</button>
+                <button onclick="switchVDVTab('arena')" class="flex flex-col items-center text-[10px] font-black text-blue-500 uppercase gap-1"><span>⚔️</span>Sàn đấu</button>
+                <button onclick="switchVDVTab('profile')" class="flex flex-col items-center text-[10px] font-black text-slate-500 uppercase gap-1 hover:text-white"><span>👤</span>Profile</button>
             `;
         }
 
-        // --- HÀM NÉN ẢNH (GIỮ LẠI ĐỂ MÁY MƯỢT) ---
-        function compressImage(base64, maxWidth = 800) {
-            return new Promise(resolve => {
-                const img = new Image(); img.src = base64;
-                img.onload = () => {
-                    const canvas = document.createElement('canvas');
-                    const scale = maxWidth / img.width;
-                    canvas.width = maxWidth; canvas.height = img.height * scale;
-                    const ctx = canvas.getContext('2d');
-                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-                    resolve(canvas.toDataURL('image/jpeg', 0.7));
-                };
-            });
-        }
-
-        // --- CẤU HÌNH SÂN (BẢN FULL) ---
+        // --- CẤU HÌNH HỆ THỐNG ---
         async function renderManagement() {
             showLoading(true);
             const doc = await db.collection("courts").doc(auth.currentUser.uid).get();
             const d = doc.exists ? doc.data() : { ten:"", dc:"", sdt:"", ds:[], imgs:[], qrImg: "" };
             showLoading(false);
             document.getElementById("main-content").innerHTML = `
-                <div class="space-y-6 pb-10 animate-fadeIn">
-                    <div class="bg-white p-6 rounded-[2.5rem] shadow-sm border">
-                        <h2 class="font-black text-blue-600 mb-4 italic uppercase text-[10px]">1. Nhận diện & QR</h2>
-                        <div class="grid grid-cols-4 gap-2 mb-4">
-                            ${[0,1,2].map(i => `<label class="aspect-square bg-slate-50 rounded-2xl flex items-center justify-center cursor-pointer border-2 border-dashed border-slate-100 overflow-hidden relative"><input type="file" class="hidden" onchange="upImg(this, ${i})"><img id="pre-${i}" src="${d.imgs?.[i]||''}" class="${d.imgs?.[i]?'':'hidden'} w-full h-full object-cover absolute"><span class="text-slate-300 font-black">+</span></label>`).join('')}
-                            <label class="aspect-square bg-purple-50 rounded-2xl flex items-center justify-center cursor-pointer border-2 border-dashed border-purple-200 overflow-hidden relative"><input type="file" class="hidden" onchange="upImg(this, 'qr')"><img id="pre-qr" src="${d.qrImg||''}" class="${d.qrImg?'':'hidden'} w-full h-full object-cover absolute"><span class="text-purple-400 font-black text-[8px]">QR</span></label>
+                <div class="grid md:grid-cols-3 gap-8 pb-20 animate-fadeIn">
+                    <div class="md:col-span-1 space-y-6">
+                        <div class="bg-slate-800 p-8 rounded-[2rem] border border-slate-700">
+                            <h2 class="font-black text-blue-500 mb-6 uppercase text-xs italic tracking-widest">Hình ảnh & QR Bank</h2>
+                            <div class="grid grid-cols-2 gap-3 mb-6">
+                                ${[0,1,2].map(i => `<label class="aspect-square bg-slate-900 rounded-2xl flex items-center justify-center cursor-pointer border-2 border-dashed border-slate-700 overflow-hidden relative"><input type="file" class="hidden" onchange="upImg(this, ${i})"><img id="pre-${i}" src="${d.imgs?.[i]||''}" class="${d.imgs?.[i]?'':'hidden'} w-full h-full object-cover absolute"><span class="text-slate-600 font-black">+ Ảnh</span></label>`).join('')}
+                                <label class="aspect-square bg-blue-900/20 rounded-2xl flex items-center justify-center cursor-pointer border-2 border-dashed border-blue-500/30 overflow-hidden relative"><input type="file" class="hidden" onchange="upImg(this, 'qr')"><img id="pre-qr" src="${d.qrImg||''}" class="${d.qrImg?'':'hidden'} w-full h-full object-cover absolute"><span class="text-blue-500 font-black text-[10px]">QR BANK</span></label>
+                            </div>
+                            <input id="m-ten" value="${d.ten}" class="w-full p-4 rounded-xl font-bold mb-3 text-sm" placeholder="Tên cụm sân">
+                            <input id="m-dc" value="${d.dc}" class="w-full p-4 rounded-xl font-bold mb-3 text-sm" placeholder="Địa chỉ">
+                            <input id="m-sdt" value="${d.sdt}" class="w-full p-4 rounded-xl font-bold text-sm" placeholder="Số điện thoại">
                         </div>
-                        <input id="m-ten" value="${d.ten}" class="w-full p-4 bg-slate-50 rounded-2xl font-bold mb-2 text-sm border-none" placeholder="Tên cụm sân">
-                        <input id="m-dc" value="${d.dc}" class="w-full p-4 bg-slate-50 rounded-2xl font-bold mb-2 text-sm border-none" placeholder="Địa chỉ">
-                        <input id="m-sdt" value="${d.sdt}" class="w-full p-4 bg-slate-50 rounded-2xl font-bold text-sm border-none" placeholder="SĐT">
                     </div>
-                    <div class="bg-white p-6 rounded-[2.5rem] shadow-sm border">
-                        <div class="flex justify-between items-center mb-4">
-                            <h2 class="font-black text-emerald-600 uppercase text-[10px]">2. Danh sách sân</h2>
-                            <div class="flex gap-2">
-                                <select id="m-type" class="bg-slate-100 text-[9px] font-black p-2 rounded-xl outline-none"><option>Cầu lông</option><option>Pickleball</option></select>
-                                <button onclick="addC()" class="bg-slate-900 text-white px-3 py-1 rounded-xl font-black text-[9px]">+ THÊM</button>
+                    <div class="md:col-span-2 space-y-6">
+                        <div class="bg-slate-800 p-8 rounded-[2rem] border border-slate-700">
+                            <div class="flex justify-between items-center mb-6">
+                                <h2 class="font-black text-emerald-500 uppercase text-xs italic tracking-widest">Danh sách sân chi tiết</h2>
+                                <div class="flex gap-2">
+                                    <select id="m-type" class="text-[10px] font-black p-2 rounded-xl"><option>Cầu lông</option><option>Pickleball</option></select>
+                                    <button onclick="addC()" class="bg-emerald-600 text-white px-6 py-2 rounded-xl font-black text-xs hover:bg-emerald-500">+ THÊM SÂN</button>
+                                </div>
+                            </div>
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-sm" id="court-list">
+                                    <thead><tr class="text-slate-500 text-[10px] uppercase border-b border-slate-700"><th class="text-left py-4">Tên sân</th><th class="text-left">Loại</th><th class="text-right">Giá / Giờ</th><th></th></tr></thead>
+                                    <tbody>${(d.ds||[]).map(s=>`<tr class="border-b border-slate-700/50"><td class="py-4 font-black c-t text-white">${s.t}</td><td class="font-bold text-slate-400 c-l">${s.l}</td><td><input class="w-full text-right font-black text-blue-400 c-g bg-transparent" value="${fmt(s.g)}"></td><td class="text-right"><button onclick="this.closest('tr').remove()" class="text-red-400 font-bold px-4">✕</button></td></tr>`).join('')}</tbody>
+                                </table>
                             </div>
                         </div>
-                        <table class="w-full text-[10px]" id="court-list">${(d.ds||[]).map(s=>`<tr class="border-b"><td class="py-3 font-black c-t">${s.t}</td><td class="font-bold text-slate-400 c-l">${s.l}</td><td><input class="w-full text-right font-black text-blue-600 c-g bg-transparent outline-none" value="${fmt(s.g)}"></td><td class="text-right"><button onclick="this.closest('tr').remove()" class="text-red-400 font-bold px-2">✕</button></td></tr>`).join('')}</table>
+                        <button onclick="saveC()" class="w-full bg-blue-600 text-white py-6 rounded-2xl font-black uppercase shadow-2xl hover:bg-blue-500 transition-all tracking-[0.2em]">Cập nhật toàn bộ hệ thống</button>
                     </div>
-                    <button onclick="saveC()" class="w-full bg-blue-600 text-white py-5 rounded-[2rem] font-black uppercase shadow-xl text-xs tracking-widest">Lưu cấu hình hệ thống</button>
                 </div>`;
         }
 
         function addC(){
             const t = document.getElementById("m-type").value;
-            const h = `<tr class="border-b"><td class="py-3 font-black c-t">Sân mới</td><td class="font-bold text-slate-400 c-l">${t}</td><td><input class="w-full text-right font-black text-blue-600 c-g bg-transparent outline-none" value="100.000"></td><td class="text-right"><button onclick="this.closest('tr').remove()" class="text-red-400 font-bold px-2">✕</button></td></tr>`;
-            document.getElementById("court-list").innerHTML += h;
+            const h = `<tr class="border-b border-slate-700/50"><td class="py-4 font-black c-t text-white">Sân mới</td><td class="font-bold text-slate-400 c-l">${t}</td><td><input class="w-full text-right font-black text-blue-400 c-g bg-transparent" value="100.000"></td><td class="text-right"><button onclick="this.closest('tr').remove()" class="text-red-400 font-bold px-4">✕</button></td></tr>`;
+            document.querySelector("#court-list tbody").innerHTML += h;
         }
 
         async function saveC() {
             showLoading(true);
-            const ds = []; document.querySelectorAll("#court-list tr").forEach(tr => ds.push({ t:tr.querySelector(".c-t").innerText, l:tr.querySelector(".c-l").innerText, g:getRaw(tr.querySelector(".c-g").value) }));
+            const ds = []; document.querySelectorAll("#court-list tbody tr").forEach(tr => ds.push({ t:tr.querySelector(".c-t").innerText, l:tr.querySelector(".c-l").innerText, g:getRaw(tr.querySelector(".c-g").value) }));
             const imgElems = [0,1,2].map(i => document.getElementById(`pre-${i}`).src).filter(s => s.startsWith('data:'));
-            const nénImgs = await Promise.all(imgElems.map(img => compressImage(img, 800)));
             const qrRaw = document.getElementById('pre-qr').src;
-            const nénQR = qrRaw.startsWith('data:') ? await compressImage(qrRaw, 500) : qrRaw;
 
-            const data = { ownerId:auth.currentUser.uid, ten:document.getElementById("m-ten").value, dc:document.getElementById("m-dc").value, sdt:document.getElementById("m-sdt").value, ds, imgs:nénImgs, qrImg:nénQR, updatedAt:Date.now() };
+            const data = { ownerId:auth.currentUser.uid, ten:document.getElementById("m-ten").value, dc:document.getElementById("m-dc").value, sdt:document.getElementById("m-sdt").value, ds, imgs:imgElems, qrImg:qrRaw, updatedAt:Date.now() };
             await db.collection("courts").doc(auth.currentUser.uid).set(data);
             await db.collection("public_courts").doc(auth.currentUser.uid).set(data);
-            showLoading(false); alert("Đã lưu thành công!");
+            showLoading(false); alert("Đã lưu hệ thống!");
         }
 
         function upImg(input, i) {
@@ -196,48 +242,28 @@
             }; reader.readAsDataURL(file);
         }
 
-        // --- DOANH THU & BXH ---
-        async function renderRevenue() {
-            const area = document.getElementById('main-content'); showLoading(true);
-            const date = document.getElementById('admin-date')?.value || new Date().toISOString().split('T')[0];
-            const snap = await db.collection("bookings").doc(`${auth.currentUser.uid}_${date}`).get();
-            showLoading(false);
-            let total = 0; if(snap.exists) Object.values(snap.data()).forEach(v => { if(v.s === 'locked') total += (v.p + (v.svc||0)); });
-            area.innerHTML = `<div class="space-y-4 animate-fadeIn"><div class="bg-white p-10 rounded-[2.5rem] border text-center shadow-sm"><p class="text-[10px] font-black text-slate-400 uppercase italic mb-1">Doanh thu ngày ${date}</p><h2 class="text-4xl font-black text-blue-600 tracking-tighter">${fmt(total)}đ</h2></div><div class="bg-slate-900 p-8 rounded-[3rem] text-white"><canvas id="revChart" height="150"></canvas></div></div>`;
-            new Chart(document.getElementById('revChart'), { type:'line', data:{ labels:['Sáng','Trưa','Chiều','Tối'], datasets:[{ data:[total*0.1, total*0.3, total*0.5, total*0.8], borderColor:'#3b82f6', tension:0.4, borderWidth:3, pointRadius:0 }] }, options:{ plugins:{ legend:{ display:false } }, scales:{ x:{ display:false }, y:{ display:false } } } });
-        }
-
-        // --- VĐV FLOW ---
-        function switchVDVTab(tab) {
-            const area = document.getElementById('main-content');
-            if(tab === 'arena') renderArena(area);
-            if(tab === 'profile') renderProfile(area);
-            if(tab === 'rank') renderRank(area);
-        }
-
-        async function renderArena(el) {
-            showLoading(true); const snap = await db.collection("public_courts").get(); showLoading(false);
-            let h = `<h2 class="font-black italic text-xl mb-6 text-slate-800 uppercase">Sàn đấu tự do</h2>`;
-            snap.forEach(doc => {
+        // --- LỊCH ĐẶT CHÍNH ---
+        function renderBookingGrid() { 
+            const uid = auth.currentUser.uid;
+            db.collection("courts").doc(uid).get().then(doc => {
+                if(!doc.exists) return renderManagement();
                 const d = doc.data();
-                h += `<div onclick="viewCourtDetail('${doc.id}')" class="bg-white rounded-[2.5rem] overflow-hidden shadow-sm mb-4 border animate-fadeIn"><img src="${d.imgs?.[0]||''}" class="w-full h-44 object-cover"><div class="p-5 flex justify-between items-center"><div><h3 class="font-black text-sm uppercase italic">${d.ten}</h3><p class="text-[9px] font-bold text-slate-400">${d.dc}</p></div><span class="bg-blue-600 text-white p-2 rounded-full text-xs">➔</span></div></div>`;
+                document.getElementById('main-content').innerHTML = `
+                    <div class="bg-slate-800 p-6 rounded-[2.5rem] border border-slate-700 shadow-2xl animate-fadeIn">
+                        <div class="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
+                            <h2 class="text-xl font-black italic text-white uppercase tracking-tighter">Bảng điều khiển lịch đặt</h2>
+                            <input type="date" id="admin-date" onchange="loadB(this.value, '${uid}')" value="${new Date().toISOString().split('T')[0]}" class="p-4 rounded-xl font-black text-sm outline-none">
+                        </div>
+                        <div class="overflow-x-auto rounded-3xl border border-slate-700 no-scrollbar">
+                            <div class="grid-container" style="--num-courts:${d.ds.length}">
+                                <div class="grid-cell header-cell">Thời gian</div>
+                                ${d.ds.map(s => `<div class="grid-cell header-cell">${s.t}<br><span class="text-[8px] opacity-50">${s.l}</span></div>`).join('')}
+                                ${generateRows(d.ds)}
+                            </div>
+                        </div>
+                    </div>`;
+                loadB(new Date().toISOString().split('T')[0], uid);
             });
-            el.innerHTML = h;
-        }
-
-        async function viewCourtDetail(ownerId) {
-            showLoading(true); const doc = await db.collection("courts").doc(ownerId).get();
-            const d = doc.data(); windowTargetCourtId = ownerId; showLoading(false);
-            document.getElementById('main-content').innerHTML = `
-                <div class="space-y-6 pb-20 animate-fadeIn">
-                    <button onclick="switchVDVTab('arena')" class="text-[9px] font-black text-slate-400 uppercase">← Quay lại sàn</button>
-                    <div><h2 class="font-black text-xl italic uppercase">${d.ten}</h2><p class="text-[9px] font-bold text-slate-400">${d.dc}</p></div>
-                    <div class="bg-white p-4 rounded-[3rem] shadow-sm border">
-                        <input type="date" id="target-date" onchange="loadB(this.value, '${ownerId}')" value="${new Date().toISOString().split('T')[0]}" class="w-full mb-4 p-4 bg-slate-50 rounded-2xl font-black text-xs outline-none">
-                        <div class="overflow-x-auto rounded-[2rem] border no-scrollbar"><div class="grid-container" style="--num-courts:${d.ds.length}"><div class="grid-cell header-cell">Giờ</div>${d.ds.map(s => `<div class="grid-cell header-cell">${s.t}</div>`).join('')}${generateRows(d.ds)}</div></div>
-                    </div>
-                </div>`;
-            loadB(new Date().toISOString().split('T')[0], ownerId);
         }
 
         function generateRows(courts) {
@@ -256,10 +282,10 @@
                 panel.classList.remove("hidden");
                 let m = 0; sel.forEach(c => m += parseFloat(c.dataset.price));
                 document.getElementById("txt-duration").innerText = (sel.length * 0.5) + " GIỜ";
-                document.getElementById("txt-money").innerText = fmt(m) + "đ TIỀN SÂN";
+                document.getElementById("txt-money").innerText = fmt(m) + "đ";
                 const actions = document.getElementById("panel-actions");
-                if(currentUserRole === 'owner') actions.innerHTML = `<button onclick="actionLock('locked')" class="flex-1 bg-blue-600 py-4 rounded-2xl font-black text-xs uppercase">Khóa trực tiếp</button>`;
-                else actions.innerHTML = `<button onclick="vdvPayPopup()" class="flex-1 bg-emerald-600 py-4 rounded-2xl font-black text-xs uppercase shadow-lg">Thanh toán đặt chỗ</button>`;
+                if(currentUserRole === 'owner') actions.innerHTML = `<button onclick="actionLock('locked')" class="bg-white text-blue-600 px-8 py-4 rounded-xl font-black text-xs uppercase hover:bg-blue-50 transition">XÁC NHẬN KHÓA</button>`;
+                else actions.innerHTML = `<button onclick="vdvPayPopup()" class="bg-emerald-500 text-white px-8 py-4 rounded-xl font-black text-xs uppercase hover:bg-emerald-400 transition shadow-lg">ĐẶT SÂN NGAY</button>`;
             } else panel.classList.add("hidden");
         }
 
@@ -269,14 +295,15 @@
             if(!snap.exists) return; const b = snap.data(); const now = Date.now();
             Object.keys(b).forEach(k => {
                 const el = document.querySelector(`[data-slot="${k}"]`); if(!el) return;
-                const d = b[k]; if(d.s === 'pending' && (now - d.t) > 600000) return;
+                const d = b[k]; 
                 if(d.s === 'pending') {
-                    el.className = "grid-cell is-pending"; el.innerHTML = `<span class="text-[7px] uppercase font-black">XN BILL</span>`;
+                    el.className = "grid-cell is-pending"; el.innerHTML = `<span class="text-[9px] font-black">XN BILL</span><span class="text-[7px] opacity-70">${d.u.split(' ')[0]}</span>`;
                     if(currentUserRole === 'owner') el.onclick = (e) => { e.stopPropagation(); showReview(d, k, date, ownerId); };
                 } else if(d.s === 'locked') {
                     const cls = el.dataset.type === "Pickleball" ? "is-pb" : "is-cl";
-                    el.className = "grid-cell " + cls; el.innerHTML = `<span class="text-[7px] uppercase font-black text-center">${d.u.split(' ')[0]}<br>${fmt(d.p + (d.svc||0))}</span>`;
-                    if(currentUserRole === 'owner') el.onclick = (e) => { e.stopPropagation(); if(confirm("Ông có chắc muốn mở khóa (hủy ca) này không?")) unlockSlot(k, date, ownerId); };
+                    el.className = "grid-cell " + cls; 
+                    el.innerHTML = `<span class="text-[9px] font-black uppercase">${d.u.split(' ')[0]}</span><span class="text-[8px] font-bold">${fmt(d.p + (d.svc||0))}đ</span>`;
+                    if(currentUserRole === 'owner') el.onclick = (e) => { e.stopPropagation(); if(confirm("Mở khóa ca này?")) unlockSlot(k, date, ownerId); };
                     else el.onclick = null;
                 }
             });
@@ -287,27 +314,86 @@
             showLoading(false); if(currentUserRole === 'owner') renderBookingGrid(); else loadB(date, ownerId);
         }
 
+        // --- DOANH THU & VĐV ---
+        async function renderRevenue() {
+            const area = document.getElementById('main-content'); showLoading(true);
+            const date = document.getElementById('admin-date')?.value || new Date().toISOString().split('T')[0];
+            const snap = await db.collection("bookings").doc(`${auth.currentUser.uid}_${date}`).get();
+            showLoading(false);
+            let total = 0; if(snap.exists) Object.values(snap.data()).forEach(v => { if(v.s === 'locked') total += (v.p + (v.svc||0)); });
+            area.innerHTML = `
+                <div class="grid md:grid-cols-2 gap-8 animate-fadeIn">
+                    <div class="bg-slate-800 p-12 rounded-[3rem] border border-slate-700 text-center flex flex-col justify-center">
+                        <p class="text-xs font-black text-slate-500 uppercase italic mb-2 tracking-widest">Tổng thu nhập ngày ${date}</p>
+                        <h2 class="text-6xl font-black text-white tracking-tighter">${fmt(total)}đ</h2>
+                        <div class="mt-8 flex justify-center gap-4 text-[10px] font-black uppercase">
+                            <span class="text-emerald-500">↑ 12% so với hôm qua</span>
+                        </div>
+                    </div>
+                    <div class="bg-slate-800 p-8 rounded-[3rem] border border-slate-700"><canvas id="revChart" height="200"></canvas></div>
+                </div>`;
+            new Chart(document.getElementById('revChart'), { type:'line', data:{ labels:['Sáng','Trưa','Chiều','Tối'], datasets:[{ data:[total*0.1, total*0.3, total*0.5, total*0.8], borderColor:'#3b82f6', tension:0.4, borderWidth:4, pointRadius:4, pointBackgroundColor:'#fff' }] }, options:{ plugins:{ legend:{ display:false } }, scales:{ x:{ grid:{display:false} }, y:{ display:false } } } });
+        }
+
+        function switchVDVTab(tab) {
+            const area = document.getElementById('main-content');
+            if(tab === 'arena') renderArena(area);
+            if(tab === 'profile') renderProfile(area);
+            if(tab === 'rank') renderRank(area);
+        }
+
+        async function renderArena(el) {
+            showLoading(true); const snap = await db.collection("public_courts").get(); showLoading(false);
+            let h = `<h2 class="font-black italic text-2xl mb-8 text-white uppercase tracking-tighter">Sàn đấu đang mở cửa</h2><div class="grid md:grid-cols-3 gap-6">`;
+            snap.forEach(doc => {
+                const d = doc.data();
+                h += `<div onclick="viewCourtDetail('${doc.id}')" class="bg-slate-800 rounded-[2.5rem] overflow-hidden shadow-2xl border border-slate-700 hover:border-blue-500 transition group cursor-pointer"><img src="${d.imgs?.[0]||''}" class="w-full h-48 object-cover group-hover:scale-105 transition duration-500"><div class="p-6"><div><h3 class="font-black text-lg uppercase italic text-white">${d.ten}</h3><p class="text-[10px] font-bold text-slate-500 mt-1 uppercase">${d.dc}</p></div><div class="mt-6 flex justify-between items-center"><span class="text-[10px] font-black text-blue-500 uppercase tracking-widest">Xem lịch sân ➔</span></div></div></div>`;
+            });
+            el.innerHTML = h + `</div>`;
+        }
+
+        async function viewCourtDetail(ownerId) {
+            showLoading(true); const doc = await db.collection("courts").doc(ownerId).get();
+            const d = doc.data(); windowTargetCourtId = ownerId; showLoading(false);
+            document.getElementById('main-content').innerHTML = `
+                <div class="space-y-6 pb-20 animate-fadeIn">
+                    <button onclick="switchVDVTab('arena')" class="text-xs font-black text-slate-500 uppercase hover:text-white transition">← Quay lại danh sách</button>
+                    <div class="flex flex-col md:flex-row justify-between items-end gap-4">
+                        <div><h2 class="font-black text-4xl italic uppercase text-white tracking-tighter">${d.ten}</h2><p class="text-xs font-bold text-slate-500 uppercase tracking-widest mt-1">${d.dc}</p></div>
+                        <input type="date" id="target-date" onchange="loadB(this.value, '${ownerId}')" value="${new Date().toISOString().split('T')[0]}" class="p-4 rounded-xl font-black text-sm outline-none">
+                    </div>
+                    <div class="bg-slate-800 p-6 rounded-[3rem] border border-slate-700 shadow-2xl overflow-x-auto no-scrollbar">
+                        <div class="grid-container" style="--num-courts:${d.ds.length}">
+                            <div class="grid-cell header-cell">Giờ</div>
+                            ${d.ds.map(s => `<div class="grid-cell header-cell">${s.t}<br><span class="text-[8px] opacity-40">${s.l}</span></div>`).join('')}
+                            ${generateRows(d.ds)}
+                        </div>
+                    </div>
+                </div>`;
+            loadB(new Date().toISOString().split('T')[0], ownerId);
+        }
+
         async function vdvPayPopup() {
             showLoading(true); const doc = await db.collection("courts").doc(windowTargetCourtId).get(); const qr = doc.data().qrImg; showLoading(false);
-            document.body.insertAdjacentHTML('beforeend', `<div id="vdv-pay" class="fixed inset-0 bg-black/95 z-[200] flex items-center justify-center p-6"><div class="bg-white w-full max-w-sm rounded-[3rem] p-8 text-center space-y-4 animate-fadeIn"><h3 class="font-black italic text-blue-600 uppercase">Chuyển khoản QR</h3><img src="${qr}" class="w-full rounded-2xl border shadow-sm"><div class="bg-slate-50 p-4 rounded-2xl text-left"><p class="text-[8px] font-black text-slate-400 uppercase">Tổng tiền</p><p class="text-xl font-black">${fmt(getRaw(document.getElementById('txt-money').innerText) + getRaw(document.getElementById('svc-price').value))}đ</p></div><label class="block w-full bg-slate-900 text-white py-4 rounded-2xl font-black uppercase text-[10px] cursor-pointer">Tải ảnh Bill xác nhận<input type="file" class="hidden" onchange="uploadBill(this)"></label><button onclick="document.getElementById('vdv-pay').remove()" class="text-slate-300 font-bold text-[9px] uppercase">Hủy đặt</button></div></div>`);
+            const total = getRaw(document.getElementById('txt-money').innerText) + getRaw(document.getElementById('svc-price').value);
+            document.body.insertAdjacentHTML('beforeend', `<div id="vdv-pay" class="fixed inset-0 bg-slate-900/95 z-[200] flex items-center justify-center p-6"><div class="bg-slate-800 w-full max-w-sm rounded-[3rem] p-10 text-center border border-slate-700 animate-fadeIn shadow-2xl"><h3 class="font-black italic text-blue-500 uppercase text-xl mb-6">Xác nhận thanh toán</h3><img src="${qr}" class="w-full rounded-3xl border border-slate-700 mb-6"><div class="bg-slate-900 p-5 rounded-2xl text-left mb-6 border border-slate-700"><p class="text-[10px] font-black text-slate-500 uppercase">Số tiền chuyển khoản</p><p class="text-2xl font-black text-white">${fmt(total)}đ</p></div><label class="block w-full bg-blue-600 text-white py-5 rounded-2xl font-black uppercase text-xs cursor-pointer shadow-xl shadow-blue-500/20 hover:bg-blue-500">Tải lên hóa đơn (Bill)<input type="file" class="hidden" onchange="uploadBill(this)"></label><button onclick="document.getElementById('vdv-pay').remove()" class="mt-6 text-slate-500 font-bold text-xs uppercase hover:text-white">Hủy giao dịch</button></div></div>`);
         }
 
         async function uploadBill(input) {
             const file = input.files[0]; if(!file) return;
             showLoading(true); const reader = new FileReader(); reader.onload = async (e) => {
-                const nénBill = await compressImage(e.target.result, 600);
                 const updates = {}; const timestamp = Date.now(); const sel = document.querySelectorAll(".is-selecting");
                 const svcVal = getRaw(document.getElementById('svc-price').value);
-                sel.forEach((el, i) => { updates[el.dataset.slot] = { s:'pending', p:parseFloat(el.dataset.price), svc: i===0?svcVal:0, t:timestamp, u:auth.currentUser.displayName, bill: i===0?nénBill:"linked" }; });
+                sel.forEach((el, i) => { updates[el.dataset.slot] = { s:'pending', p:parseFloat(el.dataset.price), svc: i===0?svcVal:0, t:timestamp, u:auth.currentUser.displayName, bill: i===0?e.target.result:"linked" }; });
                 await db.collection("bookings").doc(`${windowTargetCourtId}_${document.getElementById('target-date').value}`).set(updates, {merge:true});
                 showLoading(false); document.getElementById('vdv-pay').remove(); document.getElementById('lock-panel').classList.add('hidden');
                 loadB(document.getElementById('target-date').value, windowTargetCourtId);
-                alert("Đã gửi Bill xác nhận!");
+                alert("Đã gửi xác nhận đặt sân!");
             }; reader.readAsDataURL(file);
         }
 
         function showReview(d, k, date, ownerId) {
-            document.body.insertAdjacentHTML('beforeend', `<div id="review-modal" class="fixed inset-0 bg-black/95 z-[200] flex items-center justify-center p-6"><div class="bg-white w-full max-w-sm rounded-[3rem] p-6 text-center space-y-4 animate-fadeIn"><h3 class="font-black text-slate-800 uppercase text-xs">Kiểm tra thanh toán</h3><img src="${d.bill}" class="w-full rounded-2xl border max-h-80 object-contain shadow-sm"><div class="text-left bg-blue-50 p-4 rounded-2xl"><p class="text-[9px] font-black text-blue-600 uppercase italic">${d.u}</p><p class="text-sm font-black">Sân: ${fmt(d.p)}đ + Dịch vụ: ${fmt(d.svc)}đ</p></div><button onclick="confirmS('${k}', '${date}', '${ownerId}')" class="w-full bg-blue-600 text-white py-5 rounded-2xl font-black uppercase text-xs">Xác nhận & Khóa sân</button><button onclick="document.getElementById('review-modal').remove()" class="text-slate-300 font-bold text-[9px] uppercase">Bỏ qua</button></div></div>`);
+            document.body.insertAdjacentHTML('beforeend', `<div id="review-modal" class="fixed inset-0 bg-slate-900/95 z-[200] flex items-center justify-center p-6"><div class="bg-slate-800 w-full max-w-sm rounded-[3rem] p-8 text-center border border-slate-700 animate-fadeIn shadow-2xl"><h3 class="font-black text-white uppercase text-sm mb-6 tracking-widest italic">Kiểm tra giao dịch</h3><img src="${d.bill}" class="w-full rounded-2xl border border-slate-700 max-h-80 object-contain mb-6"><div class="text-left bg-slate-900 p-5 rounded-2xl border border-slate-700 mb-6"><p class="text-[10px] font-black text-blue-500 uppercase mb-1">${d.u}</p><p class="text-lg font-black text-white">Sân: ${fmt(d.p)}đ + DV: ${fmt(d.svc)}đ</p></div><button onclick="confirmS('${k}', '${date}', '${ownerId}')" class="w-full bg-blue-600 text-white py-5 rounded-2xl font-black uppercase text-xs shadow-xl shadow-blue-500/20">Xác nhận & Khóa lịch</button><button onclick="document.getElementById('review-modal').remove()" class="mt-6 text-slate-500 font-bold text-xs uppercase hover:text-white">Bỏ qua</button></div></div>`);
         }
 
         async function confirmS(k, d, o) {
@@ -315,26 +401,12 @@
             document.getElementById('review-modal').remove(); showLoading(false); renderBookingGrid();
         }
 
-        function renderBookingGrid() { 
-            const uid = auth.currentUser.uid;
-            db.collection("courts").doc(uid).get().then(doc => {
-                if(!doc.exists) return renderManagement();
-                const d = doc.data();
-                document.getElementById('main-content').innerHTML = `
-                    <div class="bg-white p-4 rounded-[3rem] shadow-sm border animate-fadeIn">
-                        <input type="date" id="admin-date" onchange="loadB(this.value, '${uid}')" value="${new Date().toISOString().split('T')[0]}" class="w-full mb-4 p-4 bg-slate-50 rounded-2xl font-black text-xs outline-none">
-                        <div class="overflow-x-auto rounded-[2rem] border no-scrollbar"><div class="grid-container" style="--num-courts:${d.ds.length}"><div class="grid-cell header-cell">Giờ</div>${d.ds.map(s => `<div class="grid-cell header-cell">${s.t}</div>`).join('')}${generateRows(d.ds)}</div></div>
-                    </div>`;
-                loadB(new Date().toISOString().split('T')[0], uid);
-            });
-        }
-
         function renderProfile(el) {
-            el.innerHTML = `<div class="space-y-4 animate-fadeIn"><div class="bg-slate-900 p-8 rounded-[3rem] text-white relative overflow-hidden"><h2 class="text-2xl font-black italic uppercase relative z-10">${auth.currentUser.displayName}</h2><div class="flex gap-2 mt-4 relative z-10"><span class="bg-blue-600 px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest">ELO: 1,200</span><span class="bg-emerald-500 px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest text-slate-900">VĐV CHUYÊN NGHIỆP</span></div><div class="absolute -right-4 -bottom-4 text-white/5 font-black text-8xl italic">RANK</div></div><div class="grid grid-cols-2 gap-4"><div class="bg-white p-6 rounded-[2.5rem] border text-center"><p class="text-[8px] font-black text-slate-400 uppercase">Thắng</p><p class="text-xl font-black">0</p></div><div class="bg-white p-6 rounded-[2.5rem] border text-center"><p class="text-[8px] font-black text-slate-400 uppercase">Thua</p><p class="text-xl font-black">0</p></div></div></div>`;
+            el.innerHTML = `<div class="space-y-6 animate-fadeIn max-w-2xl mx-auto"><div class="bg-gradient-to-br from-blue-700 to-blue-900 p-12 rounded-[3rem] text-white relative overflow-hidden shadow-2xl"><div class="relative z-10"><h2 class="text-4xl font-black italic uppercase tracking-tighter">${auth.currentUser.displayName}</h2><div class="flex gap-3 mt-6"><span class="bg-white/20 px-6 py-2 rounded-full text-[10px] font-black uppercase">ELO: 1,200</span><span class="bg-emerald-400 text-slate-900 px-6 py-2 rounded-full text-[10px] font-black uppercase">Professional</span></div></div><div class="absolute -right-8 -bottom-8 text-white/10 font-black text-9xl italic">RANK</div></div><div class="grid grid-cols-2 gap-6"><div class="bg-slate-800 p-10 rounded-[2.5rem] border border-slate-700 text-center shadow-xl"><p class="text-[10px] font-black text-slate-500 uppercase mb-2">Thắng</p><p class="text-3xl font-black text-white">0</p></div><div class="bg-slate-800 p-10 rounded-[2.5rem] border border-slate-700 text-center shadow-xl"><p class="text-[10px] font-black text-slate-500 uppercase mb-2">Thua</p><p class="text-3xl font-black text-white">0</p></div></div></div>`;
         }
 
         function renderRank(el) {
-            el.innerHTML = `<div class="animate-fadeIn"><h2 class="font-black italic text-xl mb-6 uppercase">Bảng xếp hạng</h2><div class="space-y-3">${[1,2,3,4,5].map(i => `<div class="bg-white p-4 rounded-2xl flex items-center justify-between border shadow-sm"><div class="flex items-center gap-4"><span class="font-black italic text-blue-600">#${i}</span><div class="w-10 h-10 bg-slate-100 rounded-full"></div><span class="font-bold text-xs">VĐV Ẩn danh</span></div><span class="font-black text-[10px] bg-slate-100 px-2 py-1 rounded-lg">1,200</span></div>`).join('')}</div></div>`;
+            el.innerHTML = `<div class="max-w-3xl mx-auto animate-fadeIn"><h2 class="font-black italic text-3xl mb-8 uppercase tracking-tighter text-white">Bảng xếp hạng liên đoàn</h2><div class="space-y-4">${[1,2,3,4,5].map(i => `<div class="bg-slate-800 p-6 rounded-3xl flex items-center justify-between border border-slate-700 hover:border-blue-500/50 transition shadow-xl"><div class="flex items-center gap-6"><span class="font-black italic text-2xl text-blue-500 w-10">#${i}</span><div class="w-14 h-14 bg-slate-900 rounded-2xl border border-slate-700"></div><div><span class="font-black text-sm text-white uppercase block">VĐV Đỉnh cao ${i}</span><span class="text-[10px] font-bold text-slate-500 uppercase">Cấp độ: Diamond</span></div></div><div class="text-right"><span class="font-black text-lg text-white">1,2${i}0</span><p class="text-[8px] font-black text-emerald-500 uppercase">Point</p></div></div>`).join('')}</div></div>`;
         }
 
         function showLoading(s) { document.getElementById('loading').classList.toggle('hidden', !s); }
@@ -342,7 +414,7 @@
             showLoading(true); const date = document.getElementById('admin-date').value;
             const sel = document.querySelectorAll(".is-selecting"); const updates = {};
             const svcVal = getRaw(document.getElementById('svc-price').value);
-            sel.forEach((el, i) => updates[el.dataset.slot] = { s: status, p: parseFloat(el.dataset.price), svc: i===0?svcVal:0, u: "Quản lý" });
+            sel.forEach((el, i) => updates[el.dataset.slot] = { s: status, p: parseFloat(el.dataset.price), svc: i===0?svcVal:0, u: "Owner" });
             await db.collection("bookings").doc(`${auth.currentUser.uid}_${date}`).set(updates, {merge:true});
             document.getElementById("lock-panel").classList.add("hidden"); showLoading(false); renderBookingGrid();
         }
